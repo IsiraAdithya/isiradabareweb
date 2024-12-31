@@ -1,11 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data from ESP32</title>
+  <script type="module" src="scripts/firebase-config.js"></script>
+  <script type="module" src="scripts/app.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #container {
+      max-width: 400px;
+      margin: auto;
+    }
+    input, button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+    }
+    #displayData {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
-    
+  <div id="container">
+    <h1>Data from ESP32</h1>
+    <label for="inputData">Enter data to send to ESP32:</label>
+    <input type="text" id="inputData" placeholder="Enter data">
+    <button onclick="sendDataToFirebase()">Send Data</button>
+    <div id="displayData">Loading data...</div>
+  </div>
 </body>
 </html>
