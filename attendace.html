@@ -254,13 +254,55 @@
         .modal-buttons button.cancel:hover {
             background-color: #d32f2f;
         }
+
+        .update-indicator {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .update-indicator.visible {
+            opacity: 1;
+        }
+
+        .connection-status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .connection-status.connected {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .connection-status.disconnected {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .retry-button {
+            display: block;
+            margin: 15px auto;
+            padding: 8px 15px;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
+        <div id="connectionStatus" class="connection-status"></div>
+        
         <header>
-            <div class="logo">Fit<span>Nation</span> Attendance</div>
+            <div class="logo">Fit<span>Nation</span> Attendance <span id="attendanceUpdateIndicator" class="update-indicator">Updated</span></div>
             <div class="date-selector">
                 <input type="date" id="dateSelector">
                 <button id="viewButton">View Attendance</button>
@@ -269,7 +311,7 @@
 
         <div class="tabs">
             <div class="tab active" data-tab="attendance">Attendance</div>
-            <div class="tab" data-tab="members">Member Management</div>
+            <div class="tab" data-tab="members">Member Management <span id="membersUpdateIndicator" class="update-indicator">Updated</span></div>
         </div>
 
         <div id="attendanceTab" class="content active">
@@ -301,19 +343,56 @@
     </div>
 
     <script>
-        // Initialize Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyBqXSXTvFepSC7Pk4e-6C7lsEN1T2ZUqsQ",
-            authDomain: "javazz-fitness.firebaseapp.com",
-            databaseURL: "https://javazz-fitness-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "javazz-fitness",
-            storageBucket: "javazz-fitness.firebasestorage.app",
-            messagingSenderId: "537542310571",
-            appId: "1:537542310571:web:fa820363ffb1c6d15c95ee"
-        };
+        // Firebase connection status element
+        const connectionStatus = document.getElementById('connectionStatus');
+        
+        // Initialize Firebase with error handling
+        let db;
+        try {
+            const firebaseConfig = {
+                apiKey: "AIzaSyBqXSXTvFepSC7Pk4e-6C7lsEN1T2ZUqsQ",
+                authDomain: "javazz-fitness.firebaseapp.com",
+                databaseURL: "https://javazz-fitness-default-rtdb.asia-southeast1.firebasedatabase.app",
+                projectId: "javazz-fitness",
+                storageBucket: "javazz-fitness.firebasestorage.app",
+                messagingSenderId: "537542310571",
+                appId: "1:537542310571:web:fa820363ffb1c6d15c95ee"
+            };
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            
+            db = firebase.database();
+            
+            // Monitor connection state
+            const connectedRef = db.ref(".info/connected");
+            connectedRef.on("value", (snap) => {
+                if (snap && snap.val() === true) {
+                    connectionStatus.textContent = "Connected to Firebase";
+                    connectionStatus.className = "connection-status connected";
+                } else {
+                    connectionStatus.textContent = "Disconnected from Firebase";
+                    connectionStatus.className = "connection-status disconnected";
+                    
+                    // Add retry button if disconnected
+                    if (!document.getElementById('retryConnection')) {
+                        const retryBtn = document.createElement('button');
+                        retryBtn.id = 'retryConnection';
+                        retryBtn.className = 'retry-button';
+                        retryBtn.textContent = 'Retry Connection';
+                        retryBtn.addEventListener('click', function() {
+                            window.location.reload();
+                        });
+                        connectionStatus.appendChild(retryBtn);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            connectionStatus.textContent = "Failed to initialize Firebase: " + error.message;
+            connectionStatus.className = "connection-status disconnected";
+        }
 
         // DOM Elements
         const dateSelector = document.getElementById('dateSelector');
@@ -327,6 +406,13 @@
         const paymentModal = document.getElementById('paymentModal');
         const confirmPaymentBtn = document.getElementById('confirmPayment');
         const cancelPaymentBtn = document.getElementById('cancelPayment');
+        const attendanceUpdateIndicator = document.getElementById('attendanceUpdateIndicator');
+        const membersUpdateIndicator = document.getElementById('membersUpdateIndicator');
+
+        // Variables to store active listeners
+        let activeAttendanceListener = null;
+        let activeMemberListener = null;
+        let activePaymentListener = null;
 
         // Set default date to today
         const today = new Date();
@@ -335,7 +421,9 @@
         selectedDateEl.textContent = formatDate(formattedToday);
 
         // Event Listeners
-        viewButton.addEventListener('click', loadAttendanceData);
+        viewButton.addEventListener('click', () => {
+            setupAttendanceListener();
+        });
 
         // Tab switching
         tabs.forEach(tab => {
@@ -350,11 +438,11 @@
                 contents.forEach(c => c.classList.remove('active'));
                 document.getElementById(tabId + 'Tab').classList.add('active');
 
-                // Load appropriate data
+                // Load appropriate data and set listeners
                 if (tabId === 'attendance') {
-                    loadAttendanceData();
+                    setupAttendanceListener();
                 } else if (tabId === 'members') {
-                    loadMembers();
+                    setupMembersListener();
                 }
             });
         });
@@ -363,9 +451,18 @@
         memberSelector.addEventListener('change', function () {
             const selectedId = this.value;
             if (selectedId) {
-                loadMemberDetails(selectedId);
+                setupMemberDetailsListener(selectedId);
             } else {
                 memberDetails.innerHTML = '';
+                // Remove previous member listener if any
+                if (activeMemberListener) {
+                    activeMemberListener();
+                    activeMemberListener = null;
+                }
+                if (activePaymentListener) {
+                    activePaymentListener();
+                    activePaymentListener = null;
+                }
             }
         });
 
@@ -375,11 +472,31 @@
             paymentModal.style.display = 'none';
         });
 
-        // Initial data load
-        loadAttendanceData();
+        // Initial data load with listeners
+        setupAttendanceListener();
 
-        // Functions
-        function loadAttendanceData() {
+        // Show update indicator
+        function showUpdateIndicator(indicator) {
+            indicator.classList.add('visible');
+            setTimeout(() => {
+                indicator.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Functions for real-time updates
+        function setupAttendanceListener() {
+            // Check if Firebase is initialized
+            if (!db) {
+                attendanceData.innerHTML = '<div class="no-data">Firebase not initialized. Please refresh the page and try again.</div>';
+                return;
+            }
+            
+            // Remove previous listener if exists
+            if (activeAttendanceListener) {
+                activeAttendanceListener();
+                activeAttendanceListener = null;
+            }
+
             const selectedDate = dateSelector.value;
             selectedDateEl.textContent = formatDate(selectedDate);
 
@@ -388,75 +505,97 @@
             // Convert selected date to format used in Firebase (YYYY-MM-DD)
             const dateFormatted = selectedDate;
 
-            // Reference to attendance data for the selected date
-            const attendanceRef = db.ref('Attendance/' + dateFormatted);
-
-            attendanceRef.once('value')
-                .then(snapshot => {
-                    const data = snapshot.val();
-
-                    if (!data) {
-                        attendanceData.innerHTML = '<div class="no-data">No attendance records for this date.</div>';
-                        return;
-                    }
-
-                    let tableHTML = `
-                        <table class="attendance-table">
-                            <thead>
-                                <tr>
-                                    <th>Member ID</th>
-                                    <th>Name</th>
-                                    <th>Session</th>
-                                    <th>Check-in Time</th>
-                                    <th>Check-out Time</th>
-                                    <th>Payment Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-
-                    Object.keys(data).forEach(memberId => {
-                        const memberData = data[memberId];
-                        const sessionCount = memberData.SessionCount || 0;
-
-                        for (let i = 1; i <= sessionCount; i++) {
-                            const session = memberData[`Session${i}`];
-                            if (!session) continue;
-
-                            const checkInTime = session.Logged_in_Time || '-';
-                            const checkOutTime = session.Logged_out_Time || '-';
-                            const name = session.Name || '-';
-                            const paymentStatus = session.Payment_Status || '-';
-
-                            const statusClass = paymentStatus.toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
-
-                            tableHTML += `
-                                <tr>
-                                    <td>${memberId}</td>
-                                    <td>${name}</td>
-                                    <td>${i}</td>
-                                    <td>${checkInTime}</td>
-                                    <td>${checkOutTime}</td>
-                                    <td><span class="payment-status ${statusClass}">${paymentStatus}</span></td>
-                                </tr>
-                            `;
+            try {
+                // Reference to attendance data for the selected date
+                const attendanceRef = db.ref('Attendance/' + dateFormatted);
+                
+                // Set up a real-time listener with safe error handling
+                activeAttendanceListener = attendanceRef.on('value', 
+                    (snapshot) => {
+                        if (snapshot) {
+                            const data = snapshot.val();
+                            updateAttendanceDisplay(data);
+                            showUpdateIndicator(attendanceUpdateIndicator);
+                        } else {
+                            attendanceData.innerHTML = '<div class="no-data">No data available or connection issue.</div>';
                         }
-                    });
-
-                    tableHTML += `
-                            </tbody>
-                        </table>
-                    `;
-
-                    attendanceData.innerHTML = tableHTML;
-                })
-                .catch(error => {
-                    console.error("Error loading attendance data:", error);
-                    attendanceData.innerHTML = '<div class="no-data">Error loading attendance data. Please try again.</div>';
-                });
+                    }, 
+                    (error) => {
+                        console.error("Error loading attendance data:", error);
+                        attendanceData.innerHTML = `<div class="no-data">Error loading attendance data: ${error.message}</div>`;
+                    }
+                );
+            } catch (error) {
+                console.error("Error setting up attendance listener:", error);
+                attendanceData.innerHTML = `<div class="no-data">Error setting up data listener: ${error.message}</div>`;
+                activeAttendanceListener = null;
+            }
         }
 
-        function loadMembers() {
+        function updateAttendanceDisplay(data) {
+            if (!data) {
+                attendanceData.innerHTML = '<div class="no-data">No attendance records for this date.</div>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="attendance-table">
+                    <thead>
+                        <tr>
+                            <th>Member ID</th>
+                            <th>Name</th>
+                            <th>Session</th>
+                            <th>Check-in Time</th>
+                            <th>Check-out Time</th>
+                            <th>Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            Object.keys(data).forEach(memberId => {
+                const memberData = data[memberId];
+                const sessionCount = memberData.SessionCount || 0;
+
+                for (let i = 1; i <= sessionCount; i++) {
+                    const session = memberData[`Session${i}`];
+                    if (!session) continue;
+
+                    const checkInTime = session.Logged_in_Time || '-';
+                    const checkOutTime = session.Logged_out_Time || '-';
+                    const name = session.Name || '-';
+                    const paymentStatus = session.Payment_Status || '-';
+
+                    const statusClass = paymentStatus.toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                    tableHTML += `
+                        <tr>
+                            <td>${memberId}</td>
+                            <td>${name}</td>
+                            <td>${i}</td>
+                            <td>${checkInTime}</td>
+                            <td>${checkOutTime}</td>
+                            <td><span class="payment-status ${statusClass}">${paymentStatus}</span></td>
+                        </tr>
+                    `;
+                }
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            attendanceData.innerHTML = tableHTML;
+        }
+
+        function setupMembersListener() {
+            // Check if Firebase is initialized
+            if (!db) {
+                memberDetails.innerHTML = '<div class="no-data">Firebase not initialized. Please refresh the page and try again.</div>';
+                return;
+            }
+            
             // Clear previous options except the default one
             while (memberSelector.options.length > 1) {
                 memberSelector.remove(1);
@@ -464,123 +603,200 @@
 
             memberDetails.innerHTML = '';
 
-            // Reference to all users
-            const usersRef = db.ref('Users');
+            try {
+                // Reference to all users
+                const usersRef = db.ref('Users');
 
-            usersRef.once('value')
-                .then(snapshot => {
-                    const data = snapshot.val();
+                // Remove existing listener if any
+                if (activeMemberListener) {
+                    activeMemberListener();
+                    activeMemberListener = null;
+                }
 
-                    if (!data) {
-                        return;
+                // Set up new real-time listener for member list
+                usersRef.on('value', 
+                    (snapshot) => {
+                        if (snapshot) {
+                            const data = snapshot.val();
+                            updateMembersSelector(data);
+                            showUpdateIndicator(membersUpdateIndicator);
+                        } else {
+                            memberSelector.innerHTML = '<option value="">No members available</option>';
+                        }
+                    }, 
+                    (error) => {
+                        console.error("Error loading members:", error);
+                        memberSelector.innerHTML = '<option value="">Error loading members</option>';
                     }
-
-                    // Sort members by ID
-                    const sortedMembers = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
-
-                    sortedMembers.forEach(memberId => {
-                        const member = data[memberId];
-                        const option = document.createElement('option');
-                        option.value = memberId;
-                        option.textContent = `${memberId}: ${member.Name || 'Unknown'}`;
-                        memberSelector.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error("Error loading members:", error);
-                });
+                );
+            } catch (error) {
+                console.error("Error setting up members listener:", error);
+                memberSelector.innerHTML = '<option value="">Error: ' + error.message + '</option>';
+            }
         }
 
-        function loadMemberDetails(memberId) {
+        function updateMembersSelector(data) {
+            // Clear previous options except the default one
+            while (memberSelector.options.length > 1) {
+                memberSelector.remove(1);
+            }
+
+            if (!data) {
+                return;
+            }
+
+            // Sort members by ID
+            const sortedMembers = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
+
+            sortedMembers.forEach(memberId => {
+                const member = data[memberId];
+                const option = document.createElement('option');
+                option.value = memberId;
+                option.textContent = `${memberId}: ${member.Name || 'Unknown'}`;
+                memberSelector.appendChild(option);
+            });
+
+            // If a member was previously selected, maintain the selection and update details
+            if (memberSelector.value) {
+                setupMemberDetailsListener(memberSelector.value);
+            }
+        }
+
+        function setupMemberDetailsListener(memberId) {
+            // Check if Firebase is initialized
+            if (!db) {
+                memberDetails.innerHTML = '<div class="no-data">Firebase not initialized. Please refresh the page and try again.</div>';
+                return;
+            }
+            
             memberDetails.innerHTML = '<div class="loading">Loading member details...</div>';
 
-            // Reference to the specific user
-            const userRef = db.ref(`Users/${memberId}`);
+            // Remove previous listeners if any
+            if (activeMemberListener) {
+                activeMemberListener();
+                activeMemberListener = null;
+            }
+            if (activePaymentListener) {
+                activePaymentListener();
+                activePaymentListener = null;
+            }
 
-            // Get user data
-            userRef.once('value')
-                .then(snapshot => {
-                    const userData = snapshot.val();
+            try {
+                // Reference to the specific user
+                const userRef = db.ref(`Users/${memberId}`);
+                const paymentRef = db.ref(`paymentTable/${memberId}`);
 
-                    if (!userData) {
-                        memberDetails.innerHTML = '<div class="no-data">Member not found.</div>';
-                        return;
-                    }
-
-                    // Get payment data
-                    return db.ref(`paymentTable/${memberId}`).once('value')
-                        .then(paymentSnapshot => {
-                            const paymentData = paymentSnapshot.val() || {};
-
-                            // Format user details
-                            const statusClass = (userData.Payment_Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
-
-                            let html = `
-                                <div class="user-detail">
-                                    <h3>Member Details</h3>
-                                    <div class="user-info">
-                                        <div class="info-item">
-                                            <div class="info-label">Member ID</div>
-                                            <div class="info-value">${memberId}</div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-label">Name</div>
-                                            <div class="info-value">${userData.Name || 'N/A'}</div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-label">Age</div>
-                                            <div class="info-value">${userData.Age || 'N/A'}</div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-label">Address</div>
-                                            <div class="info-value">${userData.Address || 'N/A'}</div>
-                                        </div>
-                                        <div class="info-item">
-                                            <div class="info-label">Payment Status</div>
-                                            <div class="info-value">
-                                                <span class="payment-status ${statusClass}">${userData.Payment_Status || 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="action-buttons">
-                                        <button id="makePaymentBtn" data-id="${memberId}">Make Payment</button>
-                                    </div>
-                                </div>
-                            `;
-
-                            // Payment history section
-                            html += `
-                                <div class="payment-history">
-                                    <h4>Payment History</h4>
-                            `;
-
-                            if (paymentData.latestPayment) {
-                                html += `
-                                    <div class="info-item">
-                                        <div class="info-label">Latest Payment Date</div>
-                                        <div class="info-value">${paymentData.latestPayment}</div>
-                                    </div>
-                                `;
-                            } else {
-                                html += `<div class="no-data">No payment history available.</div>`;
+                // Set up real-time listeners with safe error handling
+                activeMemberListener = userRef.on('value', 
+                    (userSnapshot) => {
+                        if (userSnapshot) {
+                            const userData = userSnapshot.val();
+                            
+                            if (!userData) {
+                                memberDetails.innerHTML = '<div class="no-data">Member not found.</div>';
+                                return;
                             }
 
-                            html += `</div>`;
+                            // The payment listener will trigger the UI update when both user and payment data are available
+                            if (!activePaymentListener) {
+                                activePaymentListener = paymentRef.on('value', 
+                                    (paymentSnapshot) => {
+                                        if (paymentSnapshot) {
+                                            const paymentData = paymentSnapshot.val() || {};
+                                            updateMemberDetailsDisplay(memberId, userData, paymentData);
+                                        } else {
+                                            updateMemberDetailsDisplay(memberId, userData, {});
+                                        }
+                                    }, 
+                                    (error) => {
+                                        console.error("Error loading payment data:", error);
+                                        // Still update the display with user data only
+                                        updateMemberDetailsDisplay(memberId, userData, {});
+                                    }
+                                );
+                            }
+                        } else {
+                            memberDetails.innerHTML = '<div class="no-data">Unable to retrieve member data.</div>';
+                        }
+                    }, 
+                    (error) => {
+                        console.error("Error loading member details:", error);
+                        memberDetails.innerHTML = `<div class="no-data">Error loading member details: ${error.message}</div>`;
+                    }
+                );
+            } catch (error) {
+                console.error("Error setting up member details listener:", error);
+                memberDetails.innerHTML = `<div class="no-data">Error setting up data listener: ${error.message}</div>`;
+            }
+        }
 
-                            memberDetails.innerHTML = html;
+        function updateMemberDetailsDisplay(memberId, userData, paymentData) {
+            // Format user details
+            const statusClass = (userData.Payment_Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
 
-                            // Add event listener for payment button
-                            document.getElementById('makePaymentBtn').addEventListener('click', function () {
-                                const memberId = this.getAttribute('data-id');
-                                showPaymentModal(memberId);
-                            });
-                        });
-                })
-                .catch(error => {
-                    console.error("Error loading member details:", error);
-                    memberDetails.innerHTML = '<div class="no-data">Error loading member details. Please try again.</div>';
+            let html = `
+                <div class="user-detail">
+                    <h3>Member Details</h3>
+                    <div class="user-info">
+                        <div class="info-item">
+                            <div class="info-label">Member ID</div>
+                            <div class="info-value">${memberId}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Name</div>
+                            <div class="info-value">${userData.Name || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Age</div>
+                            <div class="info-value">${userData.Age || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Address</div>
+                            <div class="info-value">${userData.Address || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Payment Status</div>
+                            <div class="info-value">
+                                <span class="payment-status ${statusClass}">${userData.Payment_Status || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="makePaymentBtn" data-id="${memberId}">Make Payment</button>
+                    </div>
+                </div>
+            `;
+
+            // Payment history section
+            html += `
+                <div class="payment-history">
+                    <h4>Payment History</h4>
+            `;
+
+            if (paymentData && paymentData.latestPayment) {
+                html += `
+                    <div class="info-item">
+                        <div class="info-label">Latest Payment Date</div>
+                        <div class="info-value">${paymentData.latestPayment}</div>
+                    </div>
+                `;
+            } else {
+                html += `<div class="no-data">No payment history available.</div>`;
+            }
+
+            html += `</div>`;
+
+            memberDetails.innerHTML = html;
+
+            // Add event listener for payment button
+            const paymentBtn = document.getElementById('makePaymentBtn');
+            if (paymentBtn) {
+                paymentBtn.addEventListener('click', function () {
+                    const memberId = this.getAttribute('data-id');
+                    showPaymentModal(memberId);
                 });
+            }
         }
 
         function showPaymentModal(memberId) {
@@ -590,52 +806,70 @@
         }
 
         function processPayment() {
+            // Check if Firebase is initialized
+            if (!db) {
+                alert("Firebase connection is not available. Please refresh the page and try again.");
+                paymentModal.style.display = 'none';
+                return;
+            }
+            
             const memberId = paymentModal.getAttribute('data-member-id');
             const currentDate = new Date();
             const formattedDate = formatDateForFirebase(currentDate);
 
-            // Path for payment update
-            const paymentTableRef = db.ref(`paymentTable/${memberId}`);
-            const userRef = db.ref(`Users/${memberId}`);
+            try {
+                // Path for payment update
+                const paymentTableRef = db.ref(`paymentTable/${memberId}`);
+                const userRef = db.ref(`Users/${memberId}`);
 
-            // Get existing payment dates if any
-            paymentTableRef.once('value')
-                .then(snapshot => {
-                    const paymentData = snapshot.val() || {};
-                    let paymentDates = paymentData.paymentDates || {};
+                // Get existing payment dates if any
+                paymentTableRef.once('value')
+                    .then(snapshot => {
+                        if (snapshot) {
+                            const paymentData = snapshot.val() || {};
+                            let paymentDates = paymentData.paymentDates || {};
 
-                    // Add new payment date
-                    const newPayment = {};
-                    newPayment[`${formattedDate}`] = true;
+                            // Add new payment date
+                            const newPayment = {};
+                            newPayment[`${formattedDate}`] = true;
 
-                    // Update payment table
-                    return paymentTableRef.update({
-                        latestPayment: formattedDate,
-                        paymentDates: { ...paymentDates, ...newPayment }
+                            // Update payment table
+                            return paymentTableRef.update({
+                                latestPayment: formattedDate,
+                                paymentDates: { ...paymentDates, ...newPayment }
+                            });
+                        } else {
+                            throw new Error("Could not retrieve payment data");
+                        }
+                    })
+                    .then(() => {
+                        // Update payment status in Users node
+                        return userRef.update({
+                            Payment_Status: 'Paid'
+                        });
+                    })
+                    .then(() => {
+                        // Hide modal - no need to manually refresh data as listeners will handle it
+                        paymentModal.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error("Error processing payment:", error);
+                        alert("There was an error processing the payment: " + error.message);
+                        paymentModal.style.display = 'none';
                     });
-                })
-                .then(() => {
-                    // Update payment status in Users node
-                    return userRef.update({
-                        Payment_Status: 'Paid'
-                    });
-                })
-                .then(() => {
-                    // Hide modal and refresh member details
-                    paymentModal.style.display = 'none';
-                    loadMemberDetails(memberId);
-
-                    // If we're on the attendance tab, refresh that data too
-                    if (document.getElementById('attendanceTab').classList.contains('active')) {
-                        loadAttendanceData();
-                    }
-                })
-                .catch(error => {
-                    console.error("Error processing payment:", error);
-                    alert("There was an error processing the payment. Please try again.");
-                    paymentModal.style.display = 'none';
-                });
+            } catch (error) {
+                console.error("Error in payment process:", error);
+                alert("There was an error processing the payment: " + error.message);
+                paymentModal.style.display = 'none';
+            }
         }
+
+        // Cleanup function to remove all active listeners when the page is unloaded
+        window.addEventListener('beforeunload', () => {
+            if (activeAttendanceListener) activeAttendanceListener();
+            if (activeMemberListener) activeMemberListener();
+            if (activePaymentListener) activePaymentListener();
+        });
 
         // Helper Functions
         function formatDate(dateString) {
