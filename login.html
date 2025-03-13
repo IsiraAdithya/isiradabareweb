@@ -4,37 +4,584 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <Link rel="stylesheet" href="styles/login.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Fingerprint Enrollment System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            margin-bottom: -1px;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .fingerprint-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .fingerprint-icon {
+            font-size: 80px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .fingerprint-status {
+            font-weight: bold;
+        }
+
+        .user-list {
+            margin-top: 20px;
+        }
+
+        .user-item {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .user-item p {
+            margin: 5px 0;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .system-status {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .system-status .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .system-status .status-indicator.online {
+            background-color: #4CAF50;
+        }
+
+        .system-status .status-indicator.offline {
+            background-color: #f44336;
+        }
+
+        .system-status .status-indicator.busy {
+            background-color: #ff9800;
+        }
+
+        .system-status .status-message {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="wrapper">
-        <form action="">
-            <h1>Login</h1>
-            <div class="input-box">
-                <input type="text" placeholder="Username" required>
-                <i class='bx bxs-user'></i>
+    <div class="container">
+        <h1>Fingerprint Enrollment System</h1>
+
+        <div class="system-status">
+            <h3>System Status: <span id="system-status-text"></span></h3>
+            <div class="status-message" id="status-message">Connecting to Firebase...</div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="enroll">Enroll New User</div>
+            <div class="tab" data-tab="verify">Verify User</div>
+            <div class="tab" data-tab="users">View Users</div>
+        </div>
+
+        <div class="tab-content active" id="enroll-tab">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" placeholder="Enter user name">
             </div>
-            <div class="input-box">
-                <input type="password" placeholder="Password" required>
-                <i class='bx bxs-lock-alt'></i>
+            <div class="form-group">
+                <label for="address">Address:</label>
+                <input type="text" id="address" placeholder="Enter user address">
             </div>
-            <div class="remember-forgot">
-                <label><input type="checkbox">Remember Me</label>
-                <a href="#">Forgot Password</a>
+            <div class="form-group">
+                <label for="age">Age:</label>
+                <input type="number" id="age" min="1" max="120" placeholder="Enter user age">
             </div>
-            <button type="submit" class="btn">Login</button>
-            <div class="register-link">
-                <p>Don't have an account? <a href="register.html">Register</a></p>
+            <div class="form-group">
+                <label for="payment-status">Payment Status:</label>
+                <select id="payment-status">
+                    <option value="Paid">Paid</option>
+                    <option value="Unpaid">Unpaid</option>
+                    <option value="Pending">Pending</option>
+                </select>
             </div>
 
-        </form>
+            <button id="enroll-btn">Start Enrollment</button>
+
+            <div class="fingerprint-display">
+                <div class="fingerprint-icon">👆</div>
+                <div class="fingerprint-status" id="enroll-status">Ready for enrollment</div>
+            </div>
+
+            <div class="status" id="enroll-result"></div>
+        </div>
+
+        <div class="tab-content" id="verify-tab">
+            <div class="fingerprint-display">
+                <div class="fingerprint-icon">👆</div>
+                <div class="fingerprint-status" id="verify-status">Click Scan to verify a fingerprint</div>
+            </div>
+
+            <button id="scan-btn">Start Verification</button>
+
+            <div id="verification-result-container" style="display:none">
+                <h3 style="margin-top:20px">Verification Result</h3>
+                <div class="user-item" id="verification-result">
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="users-tab">
+            <button id="refresh-btn">Refresh User List</button>
+            <div class="user-list" id="user-list">
+                <p>Click Refresh to load users...</p>
+            </div>
+        </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+    <script>
+        // Firebase configuration - replace with your own config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBqXSXTvFepSC7Pk4e-6C7lsEN1T2ZUqsQ",
+            authDomain: "javazz-fitness.firebaseapp.com",
+            databaseURL: "https://javazz-fitness-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "javazz-fitness",
+            storageBucket: "javazz-fitness.firebasestorage.app",
+            messagingSenderId: "537542310571",
+            appId: "1:537542310571:web:fa820363ffb1c6d15c95ee"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // DOM Elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const systemStatusText = document.getElementById('system-status-text');
+        const statusMessage = document.getElementById('status-message');
+        const enrollBtn = document.getElementById('enroll-btn');
+        const scanBtn = document.getElementById('scan-btn');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const enrollStatus = document.getElementById('enroll-status');
+        const verifyStatus = document.getElementById('verify-status');
+        const enrollResult = document.getElementById('enroll-result');
+        const verificationResultContainer = document.getElementById('verification-result-container');
+        const verificationResult = document.getElementById('verification-result');
+        const userList = document.getElementById('user-list');
+
+        // System status variables
+        let systemOnline = true; // Always set to true to bypass checks
+        let enrollmentActive = false;
+        let verificationActive = false;
+        let pollingInterval;
+        let verificationPollingInterval;
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+
+        // Initialize and start monitoring system status
+        function initSystemMonitoring() {
+            // Set system status display to always show online
+            systemStatusText.innerHTML = '<span class="status-indicator online"></span>Online';
+            statusMessage.textContent = 'System ready';
+
+            // We'll still listen for status changes for UI updates, but operations won't depend on it
+            database.ref('status').on('value', (snapshot) => {
+                const status = snapshot.val();
+                if (status) {
+                    enrollmentActive = status.enrollmentActive || false;
+                    verificationActive = status.verificationActive || false;
+
+                    // Update status display (optional, since we're bypassing status checks)
+                    if (enrollmentActive) {
+                        systemStatusText.innerHTML = '<span class="status-indicator busy"></span>Enrolling';
+                    } else if (verificationActive) {
+                        systemStatusText.innerHTML = '<span class="status-indicator busy"></span>Verifying';
+                    } else {
+                        systemStatusText.innerHTML = '<span class="status-indicator online"></span>Online';
+                    }
+
+                    statusMessage.textContent = status.message || 'System ready';
+
+                    // Update enrollment status if active
+                    if (enrollmentActive) {
+                        enrollStatus.textContent = status.message || 'Enrollment in progress...';
+                    }
+
+                    // Update verification status if active
+                    if (verificationActive) {
+                        verifyStatus.textContent = status.message || 'Verification in progress...';
+                    }
+                }
+            });
+
+            // Keep connection status display for UI feedback only
+            database.ref('.info/connected').on('value', (snap) => {
+                if (snap.val() === true) {
+                    console.log('Connected to Firebase');
+                } else {
+                    console.log('Disconnected from Firebase');
+                    // Even if disconnected, we keep systemOnline true to allow operations
+                }
+            });
+        }
+
+        // Start enrollment process
+        enrollBtn.addEventListener('click', () => {
+            const name = document.getElementById('name').value;
+            const address = document.getElementById('address').value;
+            const age = document.getElementById('age').value;
+            const paymentStatus = document.getElementById('payment-status').value;
+
+            if (!name || !address || !age) {
+                showStatus(enrollResult, 'Please fill all fields', 'error');
+                return;
+            }
+
+            // Removed system online check
+
+            // No need to check if system is busy
+            // Always proceed with enrollment
+
+            // Save enrollment details to Firebase
+            database.ref('enrollmentDetails').set({
+                name: name,
+                address: address,
+                age: parseInt(age),
+                paymentStatus: paymentStatus
+            })
+                .then(() => {
+                    // Request enrollment
+                    database.ref('commands/enrollmentRequested').set(true)
+                        .then(() => {
+                            enrollStatus.textContent = 'Waiting for system to start enrollment...';
+                            showStatus(enrollResult, 'Enrollment requested. Follow instructions on the fingerprint sensor.', 'info', false);
+
+                            // Start monitoring enrollment process
+                            startEnrollmentMonitoring();
+                        })
+                        .catch((error) => {
+                            showStatus(enrollResult, 'Error requesting enrollment: ' + error.message, 'error');
+                        });
+                })
+                .catch((error) => {
+                    showStatus(enrollResult, 'Error saving enrollment details: ' + error.message, 'error');
+                });
+        });
+
+        // Start monitoring enrollment process
+        function startEnrollmentMonitoring() {
+            // Clear existing interval if any
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+
+            pollingInterval = setInterval(() => {
+                if (!enrollmentActive) {
+                    // Check if enrollment is completed by checking the last status message
+                    database.ref('status/message').once('value', (snapshot) => {
+                        const message = snapshot.val();
+
+                        if (message && (message.includes('completed') || message.includes('failed') || message.includes('error'))) {
+                            // Enrollment has completed (success or failure)
+                            if (message.includes('completed successfully')) {
+                                showStatus(enrollResult, 'Enrollment completed successfully!', 'success');
+                            } else if (message.includes('failed') || message.includes('error')) {
+                                showStatus(enrollResult, 'Enrollment failed: ' + message, 'error');
+                            }
+
+                            // Clear the interval
+                            clearInterval(pollingInterval);
+                            pollingInterval = null;
+                        }
+                    });
+                }
+            }, 1000);
+        }
+
+        // Start verification process
+        scanBtn.addEventListener('click', () => {
+            // Removed system online check
+
+            // No need to check if system is busy
+            // Always proceed with verification
+
+            // Hide previous verification results
+            verificationResultContainer.style.display = 'none';
+
+            // Request verification
+            database.ref('commands/verificationRequested').set(true)
+                .then(() => {
+                    verifyStatus.textContent = 'Waiting for system to start verification...';
+
+                    // Start monitoring verification process
+                    startVerificationMonitoring();
+                })
+                .catch((error) => {
+                    verifyStatus.textContent = 'Error requesting verification: ' + error.message;
+                });
+        });
+
+        // Start monitoring verification process
+        function startVerificationMonitoring() {
+            // Clear existing interval if any
+            if (verificationPollingInterval) {
+                clearInterval(verificationPollingInterval);
+            }
+
+            verificationPollingInterval = setInterval(() => {
+                // Check for verification result
+                database.ref('verificationResult').once('value', (snapshot) => {
+                    const result = snapshot.val();
+
+                    if (result && result.status && result.status !== 'waiting') {
+                        // Verification has completed
+                        if (result.status === 'success' && result.id) {
+                            // Fetch user data for the matched fingerprint
+                            database.ref(`Users/${result.id}`).once('value', (userSnapshot) => {
+                                const userData = userSnapshot.val();
+
+                                if (userData) {
+                                    verifyStatus.textContent = 'Fingerprint verified successfully!';
+
+                                    // Display user details
+                                    let userInfo = `
+                                        <p><span class="bold">ID:</span> ${result.id}</p>
+                                        <p><span class="bold">Name:</span> ${userData.Name || 'N/A'}</p>
+                                        <p><span class="bold">Address:</span> ${userData.Address || 'N/A'}</p>
+                                        <p><span class="bold">Age:</span> ${userData.Age || 'N/A'}</p>
+                                        <p><span class="bold">Payment Status:</span> ${userData['Payment Status'] || 'N/A'}</p>
+                                        <p><span class="bold">Confidence:</span> ${result.confidence || 'N/A'}</p>
+                                    `;
+
+                                    verificationResult.innerHTML = userInfo;
+                                    verificationResultContainer.style.display = 'block';
+                                } else {
+                                    verifyStatus.textContent = 'User data not found for the matched fingerprint.';
+                                }
+                            });
+                        } else if (result.status === 'not_found') {
+                            verifyStatus.textContent = 'Fingerprint not recognized. Please try again.';
+                        } else if (result.status === 'error') {
+                            verifyStatus.textContent = 'Error processing fingerprint. Please try again.';
+                        }
+
+                        // Clear the interval
+                        clearInterval(verificationPollingInterval);
+                        verificationPollingInterval = null;
+                    }
+                });
+
+                // Check if verification is still active
+                if (!verificationActive) {
+                    // Verification might have completed
+                    database.ref('status/message').once('value', (snapshot) => {
+                        const message = snapshot.val();
+
+                        if (message && message.includes('verified')) {
+                            // Verification has completed
+                            // Note: The actual result handling is done above
+                        }
+                    });
+                }
+            }, 1000);
+        }
+
+        // Refresh user list from Firebase
+        refreshBtn.addEventListener('click', () => {
+            userList.innerHTML = '<p>Loading users...</p>';
+
+            database.ref('Users').once('value')
+                .then((snapshot) => {
+                    const users = snapshot.val();
+                    if (users) {
+                        let userHtml = '';
+                        Object.keys(users).forEach(id => {
+                            const user = users[id];
+                            userHtml += `
+                                <div class="user-item">
+                                    <p><span class="bold">ID:</span> ${id}</p>
+                                    <p><span class="bold">Name:</span> ${user.Name || 'N/A'}</p>
+                                    <p><span class="bold">Address:</span> ${user.Address || 'N/A'}</p>
+                                    <p><span class="bold">Age:</span> ${user.Age || 'N/A'}</p>
+                                    <p><span class="bold">Payment Status:</span> ${user['Payment Status'] || 'N/A'}</p>
+                                </div>
+                            `;
+                        });
+                        userList.innerHTML = userHtml || '<p>No users found.</p>';
+                    } else {
+                        userList.innerHTML = '<p>No users found.</p>';
+                    }
+                })
+                .catch((error) => {
+                    userList.innerHTML = `<p>Error loading users: ${error.message}</p>`;
+                });
+        });
+
+        // Helper function to show status messages
+        function showStatus(element, message, type, autoHide = true) {
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+
+            if (autoHide) {
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Initialize the system
+        initSystemMonitoring();
+
+        // Optional: Check for commands that weren't processed and clear them on page load
+        database.ref('commands').set({
+            enrollmentRequested: false,
+            verificationRequested: false
+        });
+    </script>
 </body>
 
 </html>

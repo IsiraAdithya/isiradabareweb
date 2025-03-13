@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitNation Attendance System</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .logo span {
+            color: #4CAF50;
+        }
+
+        .date-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+            border-bottom: 2px solid #4CAF50;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .attendance-table th,
+        .attendance-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .attendance-table th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+
+        .attendance-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .user-detail {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .user-detail h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+        }
+
+        .payment-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-paid {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-unpaid {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .payment-history {
+            margin-top: 20px;
+        }
+
+        .payment-history h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        #memberSelector {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button.cancel {
+            background-color: #f44336;
+        }
+
+        .modal-buttons button.cancel:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Fit<span>Nation</span> Attendance</div>
+            <div class="date-selector">
+                <input type="date" id="dateSelector">
+                <button id="viewButton">View Attendance</button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="attendance">Attendance</div>
+            <div class="tab" data-tab="members">Member Management</div>
+        </div>
+
+        <div id="attendanceTab" class="content active">
+            <h2>Daily Attendance - <span id="selectedDate"></span></h2>
+            <div id="attendanceData" class="loading">Loading attendance data...</div>
+        </div>
+
+        <div id="membersTab" class="content">
+            <h2>Member Management</h2>
+            <select id="memberSelector">
+                <option value="">Select a member</option>
+            </select>
+
+            <div id="memberDetails"></div>
+        </div>
+    </div>
+
+    <!-- Payment Confirmation Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Payment</h3>
+            <p>Are you sure you want to record a payment for this member?</p>
+            <p>This will update their payment status to "Paid" and record today's date.</p>
+            <div class="modal-buttons">
+                <button id="confirmPayment">Confirm Payment</button>
+                <button id="cancelPayment" class="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBqXSXTvFepSC7Pk4e-6C7lsEN1T2ZUqsQ",
+            authDomain: "javazz-fitness.firebaseapp.com",
+            databaseURL: "https://javazz-fitness-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "javazz-fitness",
+            storageBucket: "javazz-fitness.firebasestorage.app",
+            messagingSenderId: "537542310571",
+            appId: "1:537542310571:web:fa820363ffb1c6d15c95ee"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // DOM Elements
+        const dateSelector = document.getElementById('dateSelector');
+        const viewButton = document.getElementById('viewButton');
+        const selectedDateEl = document.getElementById('selectedDate');
+        const attendanceData = document.getElementById('attendanceData');
+        const tabs = document.querySelectorAll('.tab');
+        const contents = document.querySelectorAll('.content');
+        const memberSelector = document.getElementById('memberSelector');
+        const memberDetails = document.getElementById('memberDetails');
+        const paymentModal = document.getElementById('paymentModal');
+        const confirmPaymentBtn = document.getElementById('confirmPayment');
+        const cancelPaymentBtn = document.getElementById('cancelPayment');
+
+        // Set default date to today
+        const today = new Date();
+        const formattedToday = today.toISOString().substr(0, 10);
+        dateSelector.value = formattedToday;
+        selectedDateEl.textContent = formatDate(formattedToday);
+
+        // Event Listeners
+        viewButton.addEventListener('click', loadAttendanceData);
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Update active content
+                contents.forEach(c => c.classList.remove('active'));
+                document.getElementById(tabId + 'Tab').classList.add('active');
+
+                // Load appropriate data
+                if (tabId === 'attendance') {
+                    loadAttendanceData();
+                } else if (tabId === 'members') {
+                    loadMembers();
+                }
+            });
+        });
+
+        // Member selector event
+        memberSelector.addEventListener('change', function () {
+            const selectedId = this.value;
+            if (selectedId) {
+                loadMemberDetails(selectedId);
+            } else {
+                memberDetails.innerHTML = '';
+            }
+        });
+
+        // Payment modal events
+        confirmPaymentBtn.addEventListener('click', processPayment);
+        cancelPaymentBtn.addEventListener('click', () => {
+            paymentModal.style.display = 'none';
+        });
+
+        // Initial data load
+        loadAttendanceData();
+
+        // Functions
+        function loadAttendanceData() {
+            const selectedDate = dateSelector.value;
+            selectedDateEl.textContent = formatDate(selectedDate);
+
+            attendanceData.innerHTML = '<div class="loading">Loading attendance data...</div>';
+
+            // Convert selected date to format used in Firebase (YYYY-MM-DD)
+            const dateFormatted = selectedDate;
+
+            // Reference to attendance data for the selected date
+            const attendanceRef = db.ref('Attendance/' + dateFormatted);
+
+            attendanceRef.once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+
+                    if (!data) {
+                        attendanceData.innerHTML = '<div class="no-data">No attendance records for this date.</div>';
+                        return;
+                    }
+
+                    let tableHTML = `
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>Member ID</th>
+                                    <th>Name</th>
+                                    <th>Session</th>
+                                    <th>Check-in Time</th>
+                                    <th>Check-out Time</th>
+                                    <th>Payment Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    Object.keys(data).forEach(memberId => {
+                        const memberData = data[memberId];
+                        const sessionCount = memberData.SessionCount || 0;
+
+                        for (let i = 1; i <= sessionCount; i++) {
+                            const session = memberData[`Session${i}`];
+                            if (!session) continue;
+
+                            const checkInTime = session.Logged_in_Time || '-';
+                            const checkOutTime = session.Logged_out_Time || '-';
+                            const name = session.Name || '-';
+                            const paymentStatus = session.Payment_Status || '-';
+
+                            const statusClass = paymentStatus.toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                            tableHTML += `
+                                <tr>
+                                    <td>${memberId}</td>
+                                    <td>${name}</td>
+                                    <td>${i}</td>
+                                    <td>${checkInTime}</td>
+                                    <td>${checkOutTime}</td>
+                                    <td><span class="payment-status ${statusClass}">${paymentStatus}</span></td>
+                                </tr>
+                            `;
+                        }
+                    });
+
+                    tableHTML += `
+                            </tbody>
+                        </table>
+                    `;
+
+                    attendanceData.innerHTML = tableHTML;
+                })
+                .catch(error => {
+                    console.error("Error loading attendance data:", error);
+                    attendanceData.innerHTML = '<div class="no-data">Error loading attendance data. Please try again.</div>';
+                });
+        }
+
+        function loadMembers() {
+            // Clear previous options except the default one
+            while (memberSelector.options.length > 1) {
+                memberSelector.remove(1);
+            }
+
+            memberDetails.innerHTML = '';
+
+            // Reference to all users
+            const usersRef = db.ref('Users');
+
+            usersRef.once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+
+                    if (!data) {
+                        return;
+                    }
+
+                    // Sort members by ID
+                    const sortedMembers = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
+
+                    sortedMembers.forEach(memberId => {
+                        const member = data[memberId];
+                        const option = document.createElement('option');
+                        option.value = memberId;
+                        option.textContent = `${memberId}: ${member.Name || 'Unknown'}`;
+                        memberSelector.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error loading members:", error);
+                });
+        }
+
+        function loadMemberDetails(memberId) {
+            memberDetails.innerHTML = '<div class="loading">Loading member details...</div>';
+
+            // Reference to the specific user
+            const userRef = db.ref(`Users/${memberId}`);
+
+            // Get user data
+            userRef.once('value')
+                .then(snapshot => {
+                    const userData = snapshot.val();
+
+                    if (!userData) {
+                        memberDetails.innerHTML = '<div class="no-data">Member not found.</div>';
+                        return;
+                    }
+
+                    // Get payment data
+                    return db.ref(`paymentTable/${memberId}`).once('value')
+                        .then(paymentSnapshot => {
+                            const paymentData = paymentSnapshot.val() || {};
+
+                            // Format user details
+                            const statusClass = (userData.Payment_Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                            let html = `
+                                <div class="user-detail">
+                                    <h3>Member Details</h3>
+                                    <div class="user-info">
+                                        <div class="info-item">
+                                            <div class="info-label">Member ID</div>
+                                            <div class="info-value">${memberId}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">Name</div>
+                                            <div class="info-value">${userData.Name || 'N/A'}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">Age</div>
+                                            <div class="info-value">${userData.Age || 'N/A'}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">Address</div>
+                                            <div class="info-value">${userData.Address || 'N/A'}</div>
+                                        </div>
+                                        <div class="info-item">
+                                            <div class="info-label">Payment Status</div>
+                                            <div class="info-value">
+                                                <span class="payment-status ${statusClass}">${userData.Payment_Status || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="action-buttons">
+                                        <button id="makePaymentBtn" data-id="${memberId}">Make Payment</button>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Payment history section
+                            html += `
+                                <div class="payment-history">
+                                    <h4>Payment History</h4>
+                            `;
+
+                            if (paymentData.latestPayment) {
+                                html += `
+                                    <div class="info-item">
+                                        <div class="info-label">Latest Payment Date</div>
+                                        <div class="info-value">${paymentData.latestPayment}</div>
+                                    </div>
+                                `;
+                            } else {
+                                html += `<div class="no-data">No payment history available.</div>`;
+                            }
+
+                            html += `</div>`;
+
+                            memberDetails.innerHTML = html;
+
+                            // Add event listener for payment button
+                            document.getElementById('makePaymentBtn').addEventListener('click', function () {
+                                const memberId = this.getAttribute('data-id');
+                                showPaymentModal(memberId);
+                            });
+                        });
+                })
+                .catch(error => {
+                    console.error("Error loading member details:", error);
+                    memberDetails.innerHTML = '<div class="no-data">Error loading member details. Please try again.</div>';
+                });
+        }
+
+        function showPaymentModal(memberId) {
+            // Store the member ID as a data attribute on the modal
+            paymentModal.setAttribute('data-member-id', memberId);
+            paymentModal.style.display = 'flex';
+        }
+
+        function processPayment() {
+            const memberId = paymentModal.getAttribute('data-member-id');
+            const currentDate = new Date();
+            const formattedDate = formatDateForFirebase(currentDate);
+
+            // Path for payment update
+            const paymentTableRef = db.ref(`paymentTable/${memberId}`);
+            const userRef = db.ref(`Users/${memberId}`);
+
+            // Get existing payment dates if any
+            paymentTableRef.once('value')
+                .then(snapshot => {
+                    const paymentData = snapshot.val() || {};
+                    let paymentDates = paymentData.paymentDates || {};
+
+                    // Add new payment date
+                    const newPayment = {};
+                    newPayment[`${formattedDate}`] = true;
+
+                    // Update payment table
+                    return paymentTableRef.update({
+                        latestPayment: formattedDate,
+                        paymentDates: { ...paymentDates, ...newPayment }
+                    });
+                })
+                .then(() => {
+                    // Update payment status in Users node
+                    return userRef.update({
+                        Payment_Status: 'Paid'
+                    });
+                })
+                .then(() => {
+                    // Hide modal and refresh member details
+                    paymentModal.style.display = 'none';
+                    loadMemberDetails(memberId);
+
+                    // If we're on the attendance tab, refresh that data too
+                    if (document.getElementById('attendanceTab').classList.contains('active')) {
+                        loadAttendanceData();
+                    }
+                })
+                .catch(error => {
+                    console.error("Error processing payment:", error);
+                    alert("There was an error processing the payment. Please try again.");
+                    paymentModal.style.display = 'none';
+                });
+        }
+
+        // Helper Functions
+        function formatDate(dateString) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        }
+
+        function formatDateForFirebase(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    </script>
+</body>
+
+</html>
