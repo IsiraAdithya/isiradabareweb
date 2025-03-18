@@ -294,6 +294,39 @@
             margin: 15px auto;
             padding: 8px 15px;
         }
+
+        /* Edit form styles */
+        .edit-form {
+            margin-top: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 
@@ -338,6 +371,20 @@
             <div class="modal-buttons">
                 <button id="confirmPayment">Confirm Payment</button>
                 <button id="cancelPayment" class="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Member Modal -->
+    <div id="editMemberModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Member Details</h3>
+            <div id="editMemberForm" class="edit-form">
+                <!-- Form fields will be added here dynamically -->
+            </div>
+            <div class="modal-buttons">
+                <button id="saveChanges">Save Changes</button>
+                <button id="cancelEdit" class="cancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -408,11 +455,17 @@
         const cancelPaymentBtn = document.getElementById('cancelPayment');
         const attendanceUpdateIndicator = document.getElementById('attendanceUpdateIndicator');
         const membersUpdateIndicator = document.getElementById('membersUpdateIndicator');
+        const editMemberModal = document.getElementById('editMemberModal');
+        const editMemberForm = document.getElementById('editMemberForm');
+        const saveChangesBtn = document.getElementById('saveChanges');
+        const cancelEditBtn = document.getElementById('cancelEdit');
 
         // Variables to store active listeners
         let activeAttendanceListener = null;
         let activeMemberListener = null;
         let activePaymentListener = null;
+        // Global object to store user gym IDs for attendance view
+        let userGymIds = {};
 
         // Set default date to today
         const today = new Date();
@@ -472,8 +525,53 @@
             paymentModal.style.display = 'none';
         });
 
+        // Edit Member Modal events
+        saveChangesBtn.addEventListener('click', saveUserChanges);
+        cancelEditBtn.addEventListener('click', () => {
+            editMemberModal.style.display = 'none';
+        });
+
         // Initial data load with listeners
-        setupAttendanceListener();
+        // First, load all user data to get Gym IDs
+        loadUserData().then(() => {
+            setupAttendanceListener();
+        });
+
+        // Function to load all user data
+        function loadUserData() {
+            return new Promise((resolve, reject) => {
+                if (!db) {
+                    console.error("Firebase not initialized");
+                    reject(new Error("Firebase not initialized"));
+                    return;
+                }
+
+                const usersRef = db.ref('Users');
+                usersRef.once('value')
+                    .then(snapshot => {
+                        if (snapshot) {
+                            const data = snapshot.val() || {};
+                            userGymIds = {}; // Reset the user gym IDs
+                            
+                            // Store gym IDs for all users
+                            Object.keys(data).forEach(userId => {
+                                const userData = data[userId];
+                                if (userData) {
+                                    userGymIds[userId] = userData.Gym_ID || 'N/A';
+                                }
+                            });
+                            
+                            resolve();
+                        } else {
+                            resolve(); // Still resolve even if no data
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error loading user data:", error);
+                        reject(error);
+                    });
+            });
+        }
 
         // Show update indicator
         function showUpdateIndicator(indicator) {
@@ -505,31 +603,37 @@
             // Convert selected date to format used in Firebase (YYYY-MM-DD)
             const dateFormatted = selectedDate;
 
-            try {
-                // Reference to attendance data for the selected date
-                const attendanceRef = db.ref('Attendance/' + dateFormatted);
-                
-                // Set up a real-time listener with safe error handling
-                activeAttendanceListener = attendanceRef.on('value', 
-                    (snapshot) => {
-                        if (snapshot) {
-                            const data = snapshot.val();
-                            updateAttendanceDisplay(data);
-                            showUpdateIndicator(attendanceUpdateIndicator);
-                        } else {
-                            attendanceData.innerHTML = '<div class="no-data">No data available or connection issue.</div>';
+            // Reload user data to ensure we have latest Gym IDs
+            loadUserData().then(() => {
+                try {
+                    // Reference to attendance data for the selected date
+                    const attendanceRef = db.ref('Attendance/' + dateFormatted);
+                    
+                    // Set up a real-time listener with safe error handling
+                    activeAttendanceListener = attendanceRef.on('value', 
+                        (snapshot) => {
+                            if (snapshot) {
+                                const data = snapshot.val();
+                                updateAttendanceDisplay(data);
+                                showUpdateIndicator(attendanceUpdateIndicator);
+                            } else {
+                                attendanceData.innerHTML = '<div class="no-data">No data available or connection issue.</div>';
+                            }
+                        }, 
+                        (error) => {
+                            console.error("Error loading attendance data:", error);
+                            attendanceData.innerHTML = `<div class="no-data">Error loading attendance data: ${error.message}</div>`;
                         }
-                    }, 
-                    (error) => {
-                        console.error("Error loading attendance data:", error);
-                        attendanceData.innerHTML = `<div class="no-data">Error loading attendance data: ${error.message}</div>`;
-                    }
-                );
-            } catch (error) {
-                console.error("Error setting up attendance listener:", error);
-                attendanceData.innerHTML = `<div class="no-data">Error setting up data listener: ${error.message}</div>`;
-                activeAttendanceListener = null;
-            }
+                    );
+                } catch (error) {
+                    console.error("Error setting up attendance listener:", error);
+                    attendanceData.innerHTML = `<div class="no-data">Error setting up data listener: ${error.message}</div>`;
+                    activeAttendanceListener = null;
+                }
+            }).catch(error => {
+                console.error("Error reloading user data:", error);
+                attendanceData.innerHTML = `<div class="no-data">Error loading user data: ${error.message}</div>`;
+            });
         }
 
         function updateAttendanceDisplay(data) {
@@ -542,9 +646,9 @@
                 <table class="attendance-table">
                     <thead>
                         <tr>
-                            <th>Member ID</th>
+                            <th>#</th>
+                            <th>Gym ID</th>
                             <th>Name</th>
-                            <th>Session</th>
                             <th>Check-in Time</th>
                             <th>Check-out Time</th>
                             <th>Payment Status</th>
@@ -552,6 +656,9 @@
                     </thead>
                     <tbody>
             `;
+
+            // Create an array to hold all attendance entries for sorting
+            let attendanceEntries = [];
 
             Object.keys(data).forEach(memberId => {
                 const memberData = data[memberId];
@@ -561,24 +668,67 @@
                     const session = memberData[`Session${i}`];
                     if (!session) continue;
 
-                    const checkInTime = session.Logged_in_Time || '-';
-                    const checkOutTime = session.Logged_out_Time || '-';
+                    // Extract only time from check-in time
+                    let checkInTime = session.Logged_in_Time || '-';
+                    let checkInTimeForSort = checkInTime; // Keep original for sorting
+                    if (checkInTime !== '-') {
+                        const timeParts = checkInTime.split(' ');
+                        if (timeParts.length > 1) {
+                            checkInTime = timeParts[1]; // Get only the time part
+                        }
+                    }
+
+                    // Extract only time from check-out time
+                    let checkOutTime = session.Logged_out_Time || '-';
+                    if (checkOutTime !== '-') {
+                        const timeParts = checkOutTime.split(' ');
+                        if (timeParts.length > 1) {
+                            checkOutTime = timeParts[1]; // Get only the time part
+                        }
+                    }
+
                     const name = session.Name || '-';
                     const paymentStatus = session.Payment_Status || '-';
+                    // Get Gym ID from our cached user data
+                    const gymId = userGymIds[memberId] || 'N/A';
 
-                    const statusClass = paymentStatus.toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
-
-                    tableHTML += `
-                        <tr>
-                            <td>${memberId}</td>
-                            <td>${name}</td>
-                            <td>${i}</td>
-                            <td>${checkInTime}</td>
-                            <td>${checkOutTime}</td>
-                            <td><span class="payment-status ${statusClass}">${paymentStatus}</span></td>
-                        </tr>
-                    `;
+                    attendanceEntries.push({
+                        memberId,
+                        gymId,
+                        name,
+                        checkInTime,
+                        checkInTimeForSort,
+                        checkOutTime,
+                        paymentStatus
+                    });
                 }
+            });
+
+            // Sort attendance entries by check-in time
+            attendanceEntries.sort((a, b) => {
+                // If either check-in time is "-", handle accordingly
+                if (a.checkInTimeForSort === '-') return -1;
+                if (b.checkInTimeForSort === '-') return 1;
+                
+                // Otherwise, compare the original timestamps
+                return new Date(a.checkInTimeForSort) - new Date(b.checkInTimeForSort);
+            });
+
+            // Add sorted entries to the table
+            attendanceEntries.forEach((entry ,index)=> {
+                const rowNumbers = index +1;
+                const statusClass = entry.paymentStatus.toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                tableHTML += `
+                    <tr>
+                        <td>${rowNumbers}</td>
+                        <td>${entry.gymId}</td>
+                        <td>${entry.name}</td>
+                        <td>${entry.checkInTime}</td>
+                        <td>${entry.checkOutTime}</td>
+                        <td><span class="payment-status ${statusClass}">${entry.paymentStatus}</span></td>
+                    </tr>
+                `;
             });
 
             tableHTML += `
@@ -619,6 +769,15 @@
                         if (snapshot) {
                             const data = snapshot.val();
                             updateMembersSelector(data);
+                            // Update our cached user data
+                            if (data) {
+                                Object.keys(data).forEach(userId => {
+                                    const userData = data[userId];
+                                    if (userData) {
+                                        userGymIds[userId] = userData.Gym_ID || 'N/A';
+                                    }
+                                });
+                            }
                             showUpdateIndicator(membersUpdateIndicator);
                         } else {
                             memberSelector.innerHTML = '<option value="">No members available</option>';
@@ -743,6 +902,10 @@
                             <div class="info-value">${memberId}</div>
                         </div>
                         <div class="info-item">
+                            <div class="info-label">Gym ID</div>
+                            <div class="info-value">${userData.Gym_ID || 'N/A'}</div>
+                        </div>
+                        <div class="info-item">
                             <div class="info-label">Name</div>
                             <div class="info-value">${userData.Name || 'N/A'}</div>
                         </div>
@@ -764,126 +927,209 @@
                     
                     <div class="action-buttons">
                         <button id="makePaymentBtn" data-id="${memberId}">Make Payment</button>
+                        
+                        <button id="editMemberBtn" data-id="${memberId}">Edit Details</button>
                     </div>
                 </div>
             `;
 
-            // Payment history section
-            html += `
-                <div class="payment-history">
-                    <h4>Payment History</h4>
-            `;
-
-            if (paymentData && paymentData.latestPayment) {
+            // Add payment history section if payment data exists
+            /*
+            if (paymentData && Object.keys(paymentData).length > 0) {
                 html += `
-                    <div class="info-item">
-                        <div class="info-label">Latest Payment Date</div>
-                        <div class="info-value">${paymentData.latestPayment}</div>
+                    <div class="payment-history">
+                        <h4>Payment History</h4>
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                // Sort payment entries by date (newest first)
+                const sortedPayments = Object.keys(paymentData)
+                    .sort((a, b) => new Date(b) - new Date(a));
+
+                sortedPayments.forEach(date => {
+                    const payment = paymentData[date];
+                    const statusClass = (payment.Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+
+                    html += `
+                        <tr>
+                            <td>${formatDate(date)}</td>
+                            <td>${payment.Amount || 'N/A'}</td>
+                            <td><span class="payment-status ${statusClass}">${payment.Status || 'N/A'}</span></td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                            </tbody>
+                        </table>
                     </div>
                 `;
             } else {
-                html += `<div class="no-data">No payment history available.</div>`;
+                html += `
+                    <div class="payment-history">
+                        <h4>Payment History</h4>
+                        <div class="no-data">No payment history available</div>
+                    </div>
+                `;
             }
-
-            html += `</div>`;
-
+*/
             memberDetails.innerHTML = html;
 
-            // Add event listener for payment button
-            const paymentBtn = document.getElementById('makePaymentBtn');
-            if (paymentBtn) {
-                paymentBtn.addEventListener('click', function () {
-                    const memberId = this.getAttribute('data-id');
-                    showPaymentModal(memberId);
-                });
-            }
+            // Attach event listeners to new buttons
+            document.getElementById('makePaymentBtn').addEventListener('click', function() {
+                openPaymentModal(memberId);
+            });
+
+            document.getElementById('editMemberBtn').addEventListener('click', function() {
+                openEditMemberModal(memberId, userData);
+            });
         }
 
-        function showPaymentModal(memberId) {
-            // Store the member ID as a data attribute on the modal
-            paymentModal.setAttribute('data-member-id', memberId);
+        function openPaymentModal(memberId) {
+            // Store the member ID for use in the confirmation function
+            confirmPaymentBtn.setAttribute('data-id', memberId);
+            // Display the modal
             paymentModal.style.display = 'flex';
         }
 
         function processPayment() {
-            // Check if Firebase is initialized
-            if (!db) {
-                alert("Firebase connection is not available. Please refresh the page and try again.");
+            const memberId = confirmPaymentBtn.getAttribute('data-id');
+            
+            if (!db || !memberId) {
+                alert('Error: Cannot process payment at this time.');
                 paymentModal.style.display = 'none';
                 return;
             }
+
+            // Current date in YYYY-MM-DD format
+            const today = new Date().toISOString().split('T')[0];
             
-            const memberId = paymentModal.getAttribute('data-member-id');
-            const currentDate = new Date();
-            const formattedDate = formatDateForFirebase(currentDate);
-
-            try {
-                // Path for payment update
-                const paymentTableRef = db.ref(`paymentTable/${memberId}`);
-                const userRef = db.ref(`Users/${memberId}`);
-
-                // Get existing payment dates if any
-                paymentTableRef.once('value')
-                    .then(snapshot => {
-                        if (snapshot) {
-                            const paymentData = snapshot.val() || {};
-                            let paymentDates = paymentData.paymentDates || {};
-
-                            // Add new payment date
-                            const newPayment = {};
-                            newPayment[`${formattedDate}`] = true;
-
-                            // Update payment table
-                            return paymentTableRef.update({
-                                latestPayment: formattedDate,
-                                paymentDates: { ...paymentDates, ...newPayment }
-                            });
-                        } else {
-                            throw new Error("Could not retrieve payment data");
-                        }
-                    })
-                    .then(() => {
-                        // Update payment status in Users node
-                        return userRef.update({
-                            Payment_Status: 'Paid'
-                        });
-                    })
-                    .then(() => {
-                        // Hide modal - no need to manually refresh data as listeners will handle it
-                        paymentModal.style.display = 'none';
-                    })
-                    .catch(error => {
-                        console.error("Error processing payment:", error);
-                        alert("There was an error processing the payment: " + error.message);
-                        paymentModal.style.display = 'none';
-                    });
-            } catch (error) {
-                console.error("Error in payment process:", error);
-                alert("There was an error processing the payment: " + error.message);
+            // Update user payment status in User table
+            const userRef = db.ref(`Users/${memberId}`);
+            userRef.update({
+                Payment_Status: 'Paid',
+                Last_Payment_Date: today
+            })
+            .then(() => {
+                // Record payment in paymentTable
+                const paymentRef = db.ref(`paymentTable/${memberId}/${today}`);
+                return paymentRef.set({
+                    Date: today,
+                    Amount: '500',  // Default amount, could be made configurable
+                    Status: 'Paid'
+                });
+            })
+            .then(() => {
+                // Close modal when done
                 paymentModal.style.display = 'none';
+                // Show success message
+                alert('Payment recorded successfully!');
+            })
+            .catch(error => {
+                console.error("Error recording payment:", error);
+                alert('Error recording payment: ' + error.message);
+                paymentModal.style.display = 'none';
+            });
+        }
+
+        function openEditMemberModal(memberId, userData) {
+            // Clear the form first
+            editMemberForm.innerHTML = '';
+            
+            // Create form fields based on user data
+            const fields = [
+                { id: 'name', label: 'Name', value: userData.Name || '' },
+                { id: 'gymId', label: 'Gym ID', value: userData.Gym_ID || '' },
+                { id: 'age', label: 'Age', value: userData.Age || '' },
+                { id: 'address', label: 'Address', value: userData.Address || '' }
+            ];
+            
+            fields.forEach(field => {
+                const formGroup = document.createElement('div');
+                formGroup.className = 'form-group';
+                
+                const label = document.createElement('label');
+                label.htmlFor = field.id;
+                label.textContent = field.label;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = field.id;
+                input.value = field.value;
+                input.name = field.id;
+                
+                formGroup.appendChild(label);
+                formGroup.appendChild(input);
+                editMemberForm.appendChild(formGroup);
+            });
+            
+            // Store member ID for use in save function
+            saveChangesBtn.setAttribute('data-id', memberId);
+            
+            // Display the modal
+            editMemberModal.style.display = 'flex';
+        }
+
+        function saveUserChanges() {
+            const memberId = saveChangesBtn.getAttribute('data-id');
+            
+            if (!db || !memberId) {
+                alert('Error: Cannot save changes at this time.');
+                editMemberModal.style.display = 'none';
+                return;
+            }
+            
+            // Get updated values from the form
+            const updatedData = {
+                Name: document.getElementById('name').value,
+                Gym_ID: document.getElementById('gymId').value,
+                Age: document.getElementById('age').value,
+                Address: document.getElementById('address').value
+            };
+            
+            // Update user data in Firebase
+            const userRef = db.ref(`Users/${memberId}`);
+            userRef.update(updatedData)
+                .then(() => {
+                    // Close modal when done
+                    editMemberModal.style.display = 'none';
+                    // Show success message
+                    alert('Member details updated successfully!');
+                })
+                .catch(error => {
+                    console.error("Error updating member details:", error);
+                    alert('Error updating member details: ' + error.message);
+                    editMemberModal.style.display = 'none';
+                });
+        }
+
+        // Helper function to format dates
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                const [year, month, day] = dateString.split('-');
+                return `${day}/${month}/${year}`;
+            } catch (e) {
+                return dateString; // Return original if format is unexpected
             }
         }
 
-        // Cleanup function to remove all active listeners when the page is unloaded
-        window.addEventListener('beforeunload', () => {
-            if (activeAttendanceListener) activeAttendanceListener();
-            if (activeMemberListener) activeMemberListener();
-            if (activePaymentListener) activePaymentListener();
+        // Initialize tabs
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set the first tab as active
+            if (tabs.length > 0) {
+                tabs[0].click();
+            }
         });
-
-        // Helper Functions
-        function formatDate(dateString) {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            return new Date(dateString).toLocaleDateString(undefined, options);
-        }
-
-        function formatDateForFirebase(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
     </script>
 </body>
-
 </html>
