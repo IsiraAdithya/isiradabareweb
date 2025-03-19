@@ -210,8 +210,15 @@
 
         <div class="tabs">
             <div class="tab active" data-tab="enroll">Enroll New User</div>
-            <div class="tab" data-tab="verify">Verify User</div>
             <div class="tab" data-tab="users">View Users</div>
+            <div class="tab" data-tab="attendance">Attendance</div>
+        </div>
+        <div class="tab-content" id="attendance-tab">
+            <div class="attendance-container" style="margin: 20px 0;">
+                <h3 style="margin-bottom: 15px;">Attendance Management</h3>
+                <p style="margin-bottom: 25px;">Click the button below to view and manage attendance records.</p>
+                <button onclick="window.location.href='attendace.html'" style="margin-top: 10px;">View Attendance</button>
+            </div>
         </div>
 
         <div class="tab-content active" id="enroll-tab">
@@ -373,7 +380,7 @@
             const name = document.getElementById('name').value;
             const address = document.getElementById('address').value;
             const age = document.getElementById('age').value;
-            const paymentStatus = document.getElementById('payment-status').value;
+            const paymentStatus = document.getElementById('Payment_Status').value;
 
             if (!name || !address || !age) {
                 showStatus(enrollResult, 'Please fill all fields', 'error');
@@ -492,7 +499,7 @@
                                         <p><span class="bold">Name:</span> ${userData.Name || 'N/A'}</p>
                                         <p><span class="bold">Address:</span> ${userData.Address || 'N/A'}</p>
                                         <p><span class="bold">Age:</span> ${userData.Age || 'N/A'}</p>
-                                        <p><span class="bold">Payment Status:</span> ${userData['Payment Status'] || 'N/A'}</p>
+                                        <p><span class="bold">Payment Status:</span> ${userData.pa['Payment Status'] || 'N/A'}</p>
                                         <p><span class="bold">Confidence:</span> ${result.confidence || 'N/A'}</p>
                                     `;
 
@@ -542,11 +549,14 @@
                             const user = users[id];
                             userHtml += `
                                 <div class="user-item">
-                                    <p><span class="bold">ID:</span> ${id}</p>
+                                    <p><span class="bold">Member ID:</span> ${id} </p>
+                                    <p><span class="bold">Gym ID:</span> ${user.Gym_ID || 'N/A'}</p>
                                     <p><span class="bold">Name:</span> ${user.Name || 'N/A'}</p>
                                     <p><span class="bold">Address:</span> ${user.Address || 'N/A'}</p>
                                     <p><span class="bold">Age:</span> ${user.Age || 'N/A'}</p>
+                                    <p><span class="bold">Phone Number:</span> ${user.Phone_Number || 'N/A'}</p>
                                     <p><span class="bold">Payment Status:</span> ${user['Payment_Status'] || 'N/A'}</p>
+                                    
                                 </div>
                             `;
                         });
