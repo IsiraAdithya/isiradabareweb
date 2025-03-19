@@ -339,6 +339,7 @@
             <div class="date-selector">
                 <input type="date" id="dateSelector">
                 <button id="viewButton">View Attendance</button>
+                <button id="newUserButton" onclick="window.location.href='login.html'">New User</button>
             </div>
         </header>
 
@@ -922,6 +923,11 @@
                             <div class="info-value">
                                 <span class="payment-status ${statusClass}">${userData.Payment_Status || 'N/A'}</span>
                             </div>
+                            
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Phone Number</div>
+                            <div class="info-value">${userData.Phone_Number || 'N/A'}</div>
                         </div>
                     </div>
                     
@@ -1049,7 +1055,8 @@
                 { id: 'name', label: 'Name', value: userData.Name || '' },
                 { id: 'gymId', label: 'Gym ID', value: userData.Gym_ID || '' },
                 { id: 'age', label: 'Age', value: userData.Age || '' },
-                { id: 'address', label: 'Address', value: userData.Address || '' }
+                { id: 'address', label: 'Address', value: userData.Address || '' },
+                { id: 'phoneNumber', label: 'Phone Number', value: userData.Phone_Number || '' }
             ];
             
             fields.forEach(field => {
@@ -1092,7 +1099,8 @@
                 Name: document.getElementById('name').value,
                 Gym_ID: document.getElementById('gymId').value,
                 Age: document.getElementById('age').value,
-                Address: document.getElementById('address').value
+                Address: document.getElementById('address').value,
+                Phone_Number: document.getElementById('phoneNumber').value
             };
             
             // Update user data in Firebase
