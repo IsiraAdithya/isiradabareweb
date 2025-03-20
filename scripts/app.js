@@ -1,47 +1,37 @@
+// Define the sidebar functions in global scope so they can be called from HTML onclick
 function showSidebar() {
-    const sidebar = document.querySelector('.sidebar')
-    sidebar.style.display = 'flex'
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.style.display = 'flex';
+    }
 }
 
 function hideSidebar() {
-    const sidebar = document.querySelector('.sidebar')
-    sidebar.style.display = 'none'
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.style.display = 'none';
+    }
 }
-import { database } from "./firebase-config.js";
-import { ref, push } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
-// Handle form submission
-document.getElementById('registrationForm').addEventListener('submit', function(event) {
-    event.preventDefault(); // Prevent form submission
-
-    // Get form values
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const email = document.getElementById('email').value;
-    const city = document.getElementById('city').value;
-    const province = document.getElementById('province').value;
-    const zip = document.getElementById('zip').value;
-
-    // Create an object to store the data
-    const userData = {
-        firstName,
-        lastName,
-        email,
-        city,
-        province,
-        zip,
-    };
-
-    // Reference to the database path
-    const usersRef = ref(database, 'users'); // Users collection
-
-    // Push new data to Firebase
-    push(usersRef, userData)
-        .then(() => {
-            alert('Data successfully sent to Firebase!');
-        })
-        .catch((error) => {
-            alert('Error sending data to Firebase: ' + error.message);
+// Wait for the DOM to be fully loaded before running any code that manipulates the DOM
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the sidebar to be hidden when the page loads
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.style.display = 'none';
+    }
+    
+    // Set up any other event listeners or initialization code here
+    console.log('FITNATION app initialized successfully');
+    
+    // If you need to add event listeners to other elements, do it here
+    // For example:
+    /*
+    const loginButton = document.querySelector('.login-button');
+    if (loginButton) {
+        loginButton.addEventListener('click', function() {
+            window.location.href = 'login.html';
         });
+    }
+    */
 });
-

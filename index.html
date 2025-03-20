@@ -8,18 +8,18 @@
     <title>FITNATION</title>
     <link rel="icon" type="image/jpg" href="img/I.jpg">
     <link rel="stylesheet" href="styles/index.css">
-    <script src="scripts/app.js"></script>
+    <!-- Remove script tag from head -->
 </head>
 
 <body>
     <nav>
         <ul class="sidebar">
-            <li onclick=hideSidebar()><a href="#">
-                <img src="img/close_24dp_E8EAED_FILL0_wght400_GRAD0_opsz24.svg" alt=""></a></li>
+            <li onclick="hideSidebar()"><a href="#">
+                <img src="img/close_24dp_E8EAED_FILL0_wght400_GRAD0_opsz24.svg" alt="Close"></a></li>
             <li><a href="#">HOME</a></li>
             <li><a href="#">SERVICE</a></li>
             <li><a href="attendace.html">ABOUT US</a></li>
-            <li><a href="#">Attendace Sheeet</a></li>
+            <li><a href="#">Attendace Sheet</a></li>
             <li><a href="login.html">New User?</a></li>
         </ul>
         <ul>
@@ -29,17 +29,16 @@
             <li><a href="attendace.html">Attendance Sheet</a></li>
             <li class="hideOnMobile"><a href="#">BLOGS</a></li>
             <li class="hideOnMobile"><a href="login.html">New User</a></li>
-            <li class="menu-button" onclick=showSidebar()><a href="#"><svg src="img/menu_24dp_E8EAED_FILL0_wght400_GRAD0_opsz24.svg" xmlns="http://www.w3.org/2000/svg"
-                        height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
-                        <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z" />
-                    </svg></a></li>
+            <li class="menu-button" onclick="showSidebar()"><a href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed">
+                    <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z" />
+                </svg></a>
+            </li>
         </ul>
-
     </nav>
 
-
-    
-    <script type="module" src="scripts/app.js"></script> 
+    <!-- Place the script tag at the end of body, but NOT as a module -->
+    <script src="scripts/app.js"></script> 
 </body>
 
 </html>
