@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FitNation Attendance System</title>
-    <link rel="icon" type="image/png" href="img/I.png">
+    <link rel="icon" type="image/png" href="https://placehold.co/32x32/4CAF50/FFFFFF?text=FN">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -37,6 +37,8 @@
             margin-bottom: 20px;
             padding-bottom: 20px;
             border-bottom: 1px solid #eee;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .logo {
@@ -53,6 +55,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         input[type="date"] {
@@ -75,6 +78,19 @@
         button:hover {
             background-color: #45a049;
         }
+        
+        button.danger {
+            background-color: #f44336;
+        }
+
+        button.danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
 
         .tabs {
             display: flex;
@@ -90,6 +106,7 @@
             border-bottom: none;
             border-radius: 4px 4px 0 0;
             margin-right: 5px;
+            position: relative;
         }
 
         .tab.active {
@@ -110,6 +127,8 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            overflow-x: auto;
+            display: block;
         }
 
         .attendance-table th,
@@ -117,6 +136,7 @@
             border: 1px solid #ddd;
             padding: 12px;
             text-align: left;
+            white-space: nowrap;
         }
 
         .attendance-table th {
@@ -132,12 +152,14 @@
             background-color: #f9f9f9;
             border-radius: 8px;
             padding: 20px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
         .user-detail h3 {
             margin-bottom: 15px;
             color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
         }
 
         .user-info {
@@ -154,6 +176,7 @@
             font-weight: 600;
             color: #666;
             margin-bottom: 5px;
+            display: block;
         }
 
         .info-value {
@@ -197,16 +220,97 @@
         .action-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
         }
 
-        #memberSelector {
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+        /* Member search styles */
+        .member-search-container {
+            position: relative;
             margin-bottom: 20px;
+        }
+
+        #memberSearch {
             width: 100%;
-            max-width: 300px;
+            max-width: 400px;
+            padding: 12px 40px 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #memberSearch:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-width: 400px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .search-result-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+
+        .search-result-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .search-result-id {
+            font-size: 14px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .search-placeholder {
+            color: #999;
+            font-style: italic;
+            padding: 12px 16px;
+        }
+
+        .clear-search {
+            position: absolute;
+            right: calc(100% - 388px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: none;
+        }
+
+        .clear-search:hover {
+            color: #666;
         }
 
         .loading {
@@ -235,6 +339,7 @@
             max-width: 500px;
             width: 90%;
             text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
 
         .modal h3 {
@@ -249,11 +354,11 @@
         }
 
         .modal-buttons button.cancel {
-            background-color: #f44336;
+            background-color: #757575;
         }
 
         .modal-buttons button.cancel:hover {
-            background-color: #d32f2f;
+            background-color: #616161;
         }
 
         .update-indicator {
@@ -265,11 +370,13 @@
             border-radius: 20px;
             font-size: 12px;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(-5px);
         }
 
         .update-indicator.visible {
             opacity: 1;
+            transform: translateY(0);
         }
 
         .connection-status {
@@ -303,6 +410,7 @@
             padding: 20px;
             border-radius: 8px;
             border: 1px solid #ddd;
+            text-align: left;
         }
 
         .form-group {
@@ -327,6 +435,7 @@
             display: flex;
             gap: 10px;
             margin-top: 20px;
+            justify-content: flex-end;
         }
     </style>
 </head>
@@ -334,45 +443,54 @@
 <body>
     <div class="container">
         <div id="connectionStatus" class="connection-status"></div>
-        
         <header>
-            <div class="logo">Fit<span>Nation</span> Attendance <span id="attendanceUpdateIndicator" class="update-indicator">Updated</span></div>
+            <div class="logo">Fit<span>Nation</span> Attendance</div>
             <div class="date-selector">
                 <input type="date" id="dateSelector">
                 <button id="viewButton">View Attendance</button>
-                <button id="newUserButton" onclick="window.location.href='login.html'">New User</button>
             </div>
         </header>
-
         <div class="tabs">
-            <div class="tab active" data-tab="attendance">Attendance</div>
-            <div class="tab" data-tab="members">Member Management <span id="membersUpdateIndicator" class="update-indicator">Updated</span></div>
+            <div class="tab active" data-tab="attendance">Attendance <span id="attendanceUpdateIndicator" class="update-indicator"></span></div>
+            <div class="tab" data-tab="members">Member Management <span id="membersUpdateIndicator" class="update-indicator"></span></div>
         </div>
-
         <div id="attendanceTab" class="content active">
             <h2>Daily Attendance - <span id="selectedDate"></span></h2>
             <div id="attendanceData" class="loading">Loading attendance data...</div>
         </div>
-
         <div id="membersTab" class="content">
             <h2>Member Management</h2>
-            <select id="memberSelector">
-                <option value="">Select a member</option>
-            </select>
-
-            <div id="memberDetails"></div>
+            <div class="member-search-container">
+                <input type="text" id="memberSearch" placeholder="Search members by name or ID...">
+                <button type="button" class="clear-search" id="clearSearch">&times;</button>
+                <div id="searchResults" class="search-results"></div>
+            </div>
+            <div id="memberDetails">
+                <div class="no-data">Select a member to view their details.</div>
+            </div>
         </div>
     </div>
-
+    
     <!-- Payment Confirmation Modal -->
     <div id="paymentModal" class="modal">
         <div class="modal-content">
             <h3>Confirm Payment</h3>
             <p>Are you sure you want to record a payment for this member?</p>
-            <p>This will update their payment status to "Paid" and record today's date.</p>
             <div class="modal-buttons">
                 <button id="confirmPayment">Confirm Payment</button>
-                <button id="cancelPayment" class="cancel">Cancel</button>
+                <button class="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unpaid Confirmation Modal -->
+    <div id="unpaidModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Status Change</h3>
+            <p>Are you sure you want to mark this member as Unpaid? This will reverse the last payment record.</p>
+            <div class="modal-buttons">
+                <button id="confirmUnpaid" class="danger">Mark as Unpaid</button>
+                <button class="cancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -381,12 +499,12 @@
     <div id="editMemberModal" class="modal">
         <div class="modal-content">
             <h3>Edit Member Details</h3>
-            <div id="editMemberForm" class="edit-form">
-                <!-- Form fields will be added here dynamically -->
+            <div id="editMemberFormContainer">
+                <!-- Form will be dynamically inserted here -->
             </div>
             <div class="modal-buttons">
                 <button id="saveChanges">Save Changes</button>
-                <button id="cancelEdit" class="cancel">Cancel</button>
+                <button class="cancel">Cancel</button>
             </div>
         </div>
     </div>
@@ -394,7 +512,7 @@
     <script>
         // Firebase connection status element
         const connectionStatus = document.getElementById('connectionStatus');
-        
+
         // Initialize Firebase with error handling
         let db;
         try {
@@ -403,37 +521,33 @@
                 authDomain: "javazz-fitness.firebaseapp.com",
                 databaseURL: "https://javazz-fitness-default-rtdb.asia-southeast1.firebasedatabase.app",
                 projectId: "javazz-fitness",
-                storageBucket: "javazz-fitness.firebasestorage.app",
+                storageBucket: "javazz-fitness.appspot.com",
                 messagingSenderId: "537542310571",
                 appId: "1:537542310571:web:fa820363ffb1c6d15c95ee"
             };
-
             if (!firebase.apps.length) {
                 firebase.initializeApp(firebaseConfig);
             }
-            
             db = firebase.database();
-            
+
             // Monitor connection state
             const connectedRef = db.ref(".info/connected");
             connectedRef.on("value", (snap) => {
+                const retryBtn = document.getElementById('retryConnection');
                 if (snap && snap.val() === true) {
-                    connectionStatus.textContent = "Connected to Firebase";
+                    connectionStatus.textContent = "Connected to Database";
                     connectionStatus.className = "connection-status connected";
+                    if (retryBtn) retryBtn.remove();
                 } else {
-                    connectionStatus.textContent = "Disconnected from Firebase";
+                    connectionStatus.textContent = "Disconnected from Database";
                     connectionStatus.className = "connection-status disconnected";
-                    
-                    // Add retry button if disconnected
-                    if (!document.getElementById('retryConnection')) {
-                        const retryBtn = document.createElement('button');
-                        retryBtn.id = 'retryConnection';
-                        retryBtn.className = 'retry-button';
-                        retryBtn.textContent = 'Retry Connection';
-                        retryBtn.addEventListener('click', function() {
-                            window.location.reload();
-                        });
-                        connectionStatus.appendChild(retryBtn);
+                    if (!retryBtn) {
+                        const newRetryBtn = document.createElement('button');
+                        newRetryBtn.id = 'retryConnection';
+                        newRetryBtn.className = 'retry-button';
+                        newRetryBtn.textContent = 'Retry Connection';
+                        newRetryBtn.addEventListener('click', () => window.location.reload());
+                        connectionStatus.appendChild(newRetryBtn);
                     }
                 }
             });
@@ -450,50 +564,50 @@
         const attendanceData = document.getElementById('attendanceData');
         const tabs = document.querySelectorAll('.tab');
         const contents = document.querySelectorAll('.content');
-        const memberSelector = document.getElementById('memberSelector');
+        const memberSearch = document.getElementById('memberSearch');
+        const searchResults = document.getElementById('searchResults');
+        const clearSearch = document.getElementById('clearSearch');
         const memberDetails = document.getElementById('memberDetails');
+        
         const paymentModal = document.getElementById('paymentModal');
         const confirmPaymentBtn = document.getElementById('confirmPayment');
-        const cancelPaymentBtn = document.getElementById('cancelPayment');
+        
+        const unpaidModal = document.getElementById('unpaidModal');
+        const confirmUnpaidBtn = document.getElementById('confirmUnpaid');
+        
+        const editMemberModal = document.getElementById('editMemberModal');
+        const editMemberFormContainer = document.getElementById('editMemberFormContainer');
+        const saveChangesBtn = document.getElementById('saveChanges');
+        
         const attendanceUpdateIndicator = document.getElementById('attendanceUpdateIndicator');
         const membersUpdateIndicator = document.getElementById('membersUpdateIndicator');
-        const editMemberModal = document.getElementById('editMemberModal');
-        const editMemberForm = document.getElementById('editMemberForm');
-        const saveChangesBtn = document.getElementById('saveChanges');
-        const cancelEditBtn = document.getElementById('cancelEdit');
 
         // Variables to store active listeners
         let activeAttendanceListener = null;
-        let activeMemberListener = null;
+        let activeMembersListener = null;
+        let activeSingleMemberListener = null;
         let activePaymentListener = null;
-        // Global object to store user gym IDs for attendance view
+
+        // Global object to store user data
         let userGymIds = {};
+        let allMembersData = {};
+        let currentSelectedMemberId = null;
 
         // Set default date to today
         const today = new Date();
         const formattedToday = today.toISOString().substr(0, 10);
         dateSelector.value = formattedToday;
-        selectedDateEl.textContent = formatDate(formattedToday);
 
         // Event Listeners
-        viewButton.addEventListener('click', () => {
-            setupAttendanceListener();
-        });
+        viewButton.addEventListener('click', setupAttendanceListener);
 
-        // Tab switching
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const tabId = tab.getAttribute('data-tab');
-
-                // Update active tab
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-
-                // Update active content
                 contents.forEach(c => c.classList.remove('active'));
                 document.getElementById(tabId + 'Tab').classList.add('active');
-
-                // Load appropriate data and set listeners
                 if (tabId === 'attendance') {
                     setupAttendanceListener();
                 } else if (tabId === 'members') {
@@ -502,139 +616,117 @@
             });
         });
 
-        // Member selector event
-        memberSelector.addEventListener('change', function () {
-            const selectedId = this.value;
-            if (selectedId) {
-                setupMemberDetailsListener(selectedId);
-            } else {
-                memberDetails.innerHTML = '';
-                // Remove previous member listener if any
-                if (activeMemberListener) {
-                    activeMemberListener();
-                    activeMemberListener = null;
-                }
-                if (activePaymentListener) {
-                    activePaymentListener();
-                    activePaymentListener = null;
-                }
+        memberSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            clearSearch.style.display = searchTerm.length > 0 ? 'block' : 'none';
+            if (searchTerm.length === 0) {
+                searchResults.style.display = 'none';
+                return;
+            }
+            const filteredMembers = Object.keys(allMembersData).filter(memberId => {
+                const member = allMembersData[memberId];
+                if (!member) return false;
+                return (member.Name || '').toLowerCase().includes(searchTerm) ||
+                       (member.Gym_ID || '').toLowerCase().includes(searchTerm) ||
+                       memberId.toLowerCase().includes(searchTerm);
+            });
+            displaySearchResults(filteredMembers);
+        });
+
+        clearSearch.addEventListener('click', () => {
+            memberSearch.value = '';
+            searchResults.style.display = 'none';
+            clearSearch.style.display = 'none';
+            memberDetails.innerHTML = '<div class="no-data">Select a member to view their details.</div>';
+            currentSelectedMemberId = null;
+            if(activeSingleMemberListener) activeSingleMemberListener();
+            memberSearch.focus();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('.member-search-container')) {
+                searchResults.style.display = 'none';
             }
         });
-
-        // Payment modal events
+        
+        // Modal general close buttons
+        document.querySelectorAll('.modal .cancel').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.modal').style.display = 'none';
+            });
+        });
+        
         confirmPaymentBtn.addEventListener('click', processPayment);
-        cancelPaymentBtn.addEventListener('click', () => {
-            paymentModal.style.display = 'none';
-        });
-
-        // Edit Member Modal events
+        confirmUnpaidBtn.addEventListener('click', processUnpaid);
         saveChangesBtn.addEventListener('click', saveUserChanges);
-        cancelEditBtn.addEventListener('click', () => {
-            editMemberModal.style.display = 'none';
-        });
+        
+        // Initial data load
+        loadInitialData();
 
-        // Initial data load with listeners
-        // First, load all user data to get Gym IDs
-        loadUserData().then(() => {
-            setupAttendanceListener();
-        });
+        function loadInitialData() {
+            loadUserData().then(() => {
+                setupAttendanceListener();
+                setupMembersListener();
+            }).catch(err => {
+                console.error("Initial data load failed:", err);
+            });
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
 
-        // Function to load all user data
+        function showUpdateIndicator(indicator) {
+            indicator.textContent = 'Updated';
+            indicator.classList.add('visible');
+            setTimeout(() => indicator.classList.remove('visible'), 3000);
+        }
+
         function loadUserData() {
             return new Promise((resolve, reject) => {
-                if (!db) {
-                    console.error("Firebase not initialized");
-                    reject(new Error("Firebase not initialized"));
-                    return;
-                }
-
-                const usersRef = db.ref('Users');
-                usersRef.once('value')
-                    .then(snapshot => {
-                        if (snapshot) {
-                            const data = snapshot.val() || {};
-                            userGymIds = {}; // Reset the user gym IDs
-                            
-                            // Store gym IDs for all users
-                            Object.keys(data).forEach(userId => {
-                                const userData = data[userId];
-                                if (userData) {
-                                    userGymIds[userId] = userData.Gym_ID || 'N/A';
-                                }
-                            });
-                            
-                            resolve();
-                        } else {
-                            resolve(); // Still resolve even if no data
+                if (!db) return reject(new Error("Firebase not initialized"));
+                db.ref('Users').once('value').then(snapshot => {
+                    const data = snapshot.val() || {};
+                    userGymIds = {};
+                    Object.keys(data).forEach(userId => {
+                        if (data[userId]) {
+                            userGymIds[userId] = data[userId].Gym_ID || 'N/A';
                         }
-                    })
-                    .catch(error => {
-                        console.error("Error loading user data:", error);
-                        reject(error);
                     });
+                    resolve();
+                }).catch(error => {
+                    console.error("Error loading user data:", error);
+                    reject(error);
+                });
             });
         }
 
-        // Show update indicator
-        function showUpdateIndicator(indicator) {
-            indicator.classList.add('visible');
-            setTimeout(() => {
-                indicator.classList.remove('visible');
-            }, 3000);
-        }
-
-        // Functions for real-time updates
         function setupAttendanceListener() {
-            // Check if Firebase is initialized
             if (!db) {
-                attendanceData.innerHTML = '<div class="no-data">Firebase not initialized. Please refresh the page and try again.</div>';
+                attendanceData.innerHTML = '<div class="no-data">Database not connected.</div>';
                 return;
             }
+            if (activeAttendanceListener) activeAttendanceListener();
             
-            // Remove previous listener if exists
-            if (activeAttendanceListener) {
-                activeAttendanceListener();
-                activeAttendanceListener = null;
-            }
-
             const selectedDate = dateSelector.value;
-            selectedDateEl.textContent = formatDate(selectedDate);
-
+            selectedDateEl.textContent = new Date(selectedDate + 'T00:00:00').toDateString();
             attendanceData.innerHTML = '<div class="loading">Loading attendance data...</div>';
 
-            // Convert selected date to format used in Firebase (YYYY-MM-DD)
-            const dateFormatted = selectedDate;
-
-            // Reload user data to ensure we have latest Gym IDs
             loadUserData().then(() => {
-                try {
-                    // Reference to attendance data for the selected date
-                    const attendanceRef = db.ref('Attendance/' + dateFormatted);
-                    
-                    // Set up a real-time listener with safe error handling
-                    activeAttendanceListener = attendanceRef.on('value', 
-                        (snapshot) => {
-                            if (snapshot) {
-                                const data = snapshot.val();
-                                updateAttendanceDisplay(data);
-                                showUpdateIndicator(attendanceUpdateIndicator);
-                            } else {
-                                attendanceData.innerHTML = '<div class="no-data">No data available or connection issue.</div>';
-                            }
-                        }, 
-                        (error) => {
-                            console.error("Error loading attendance data:", error);
-                            attendanceData.innerHTML = `<div class="no-data">Error loading attendance data: ${error.message}</div>`;
-                        }
-                    );
-                } catch (error) {
-                    console.error("Error setting up attendance listener:", error);
-                    attendanceData.innerHTML = `<div class="no-data">Error setting up data listener: ${error.message}</div>`;
-                    activeAttendanceListener = null;
-                }
+                const attendanceRef = db.ref('Attendance/' + selectedDate);
+                activeAttendanceListener = attendanceRef.on('value', snapshot => {
+                    if (snapshot) {
+                        updateAttendanceDisplay(snapshot.val());
+                        showUpdateIndicator(attendanceUpdateIndicator);
+                    }
+                }, error => {
+                    console.error("Error loading attendance data:", error);
+                    attendanceData.innerHTML = `<div class="no-data">Error: ${error.message}</div>`;
+                });
             }).catch(error => {
-                console.error("Error reloading user data:", error);
-                attendanceData.innerHTML = `<div class="no-data">Error loading user data: ${error.message}</div>`;
+                 attendanceData.innerHTML = `<div class="no-data">Error loading user data: ${error.message}</div>`;
             });
         }
 
@@ -643,502 +735,318 @@
                 attendanceData.innerHTML = '<div class="no-data">No attendance records for this date.</div>';
                 return;
             }
-
-            let tableHTML = `
-                <table class="attendance-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Gym ID</th>
-                            <th>Check-in Time</th>
-                            <th>Check-out Time</th>
-                            <th>Payment Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            // Create an array to hold all attendance entries for sorting
             let attendanceEntries = [];
-
             Object.keys(data).forEach(memberId => {
                 const memberData = data[memberId];
+                if (!memberData) return;
                 const sessionCount = memberData.SessionCount || 0;
-
                 for (let i = 1; i <= sessionCount; i++) {
                     const session = memberData[`Session${i}`];
                     if (!session) continue;
-
-                    // Extract only time from check-in time
+                    
                     let checkInTime = session.Logged_in_Time || '-';
-                    let checkInTimeForSort = checkInTime; // Keep original for sorting
-                    if (checkInTime !== '-') {
-                        const timeParts = checkInTime.split(' ');
-                        if (timeParts.length > 1) {
-                            checkInTime = timeParts[1]; // Get only the time part
-                        }
-                    }
-
-                    // Extract only time from check-out time
                     let checkOutTime = session.Logged_out_Time || '-';
-                    if (checkOutTime !== '-') {
-                        const timeParts = checkOutTime.split(' ');
-                        if (timeParts.length > 1) {
-                            checkOutTime = timeParts[1]; // Get only the time part
-                        }
-                    }
-
-                    const name = session.Name || '-';
-                    const paymentStatus = session.Payment_Status || '-';
-                    // Get Gym ID from our cached user data
-                    const gymId = userGymIds[memberId] || 'N/A';
 
                     attendanceEntries.push({
-                        memberId,
-                        gymId,
-                        name,
-                        checkInTime,
-                        checkInTimeForSort,
-                        checkOutTime,
-                        paymentStatus
+                        name: session.Name || '-',
+                        gymId: userGymIds[memberId] || 'N/A',
+                        checkInTime: checkInTime !== '-' ? new Date(checkInTime).toLocaleTimeString() : '-',
+                        checkInTimeForSort: checkInTime,
+                        checkOutTime: checkOutTime !== '-' ? new Date(checkOutTime).toLocaleTimeString() : '-',
+                        paymentStatus: session.Payment_Status || '-'
                     });
                 }
             });
 
-            // Sort attendance entries by check-in time
-            attendanceEntries.sort((a, b) => {
-                // If either check-in time is "-", handle accordingly
-                if (a.checkInTimeForSort === '-') return -1;
-                if (b.checkInTimeForSort === '-') return 1;
-                
-                // Otherwise, compare the original timestamps
-                return new Date(a.checkInTimeForSort) - new Date(b.checkInTimeForSort);
-            });
+            attendanceEntries.sort((a, b) => new Date(a.checkInTimeForSort) - new Date(b.checkInTimeForSort));
 
-            // Add sorted entries to the table
-            attendanceEntries.forEach((entry ,index)=> {
-                const rowNumbers = index +1;
+            let tableHTML = `
+                <table class="attendance-table">
+                    <thead>
+                        <tr><th>#</th><th>Name</th><th>Gym ID</th><th>Check-in</th><th>Check-out</th><th>Payment Status</th></tr>
+                    </thead>
+                    <tbody>`;
+            attendanceEntries.forEach((entry, index) => {
                 const statusClass = entry.paymentStatus.toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
-
                 tableHTML += `
                     <tr>
-                        <td>${rowNumbers}</td>
+                        <td>${index + 1}</td>
                         <td>${entry.name}</td>
                         <td>${entry.gymId}</td>
                         <td>${entry.checkInTime}</td>
                         <td>${entry.checkOutTime}</td>
                         <td><span class="payment-status ${statusClass}">${entry.paymentStatus}</span></td>
-                    </tr>
-                `;
+                    </tr>`;
             });
-
-            tableHTML += `
-                    </tbody>
-                </table>
-            `;
-
+            tableHTML += `</tbody></table>`;
             attendanceData.innerHTML = tableHTML;
         }
 
         function setupMembersListener() {
-            // Check if Firebase is initialized
-            if (!db) {
-                memberDetails.innerHTML = '<div class="no-data">Firebase not initialized. Please refresh the page and try again.</div>';
-                return;
-            }
-            
-            // Clear previous options except the default one
-            while (memberSelector.options.length > 1) {
-                memberSelector.remove(1);
-            }
-
-            memberDetails.innerHTML = '';
-
-            try {
-                // Reference to all users
-                const usersRef = db.ref('Users');
-
-                // Remove existing listener if any
-                if (activeMemberListener) {
-                    activeMemberListener();
-                    activeMemberListener = null;
-                }
-
-                // Set up new real-time listener for member list
-                usersRef.on('value', 
-                    (snapshot) => {
-                        if (snapshot) {
-                            const data = snapshot.val();
-                            updateMembersSelector(data);
-                            // Update our cached user data
-                            if (data) {
-                                Object.keys(data).forEach(userId => {
-                                    const userData = data[userId];
-                                    if (userData) {
-                                        userGymIds[userId] = userData.Gym_ID || 'N/A';
-                                    }
-                                });
-                            }
-                            showUpdateIndicator(membersUpdateIndicator);
-                        } else {
-                            memberSelector.innerHTML = '<option value="">No members available</option>';
-                        }
-                    }, 
-                    (error) => {
-                        console.error("Error loading members:", error);
-                        memberSelector.innerHTML = '<option value="">Error loading members</option>';
+            if (!db) return;
+            if (activeMembersListener) activeMembersListener();
+            const usersRef = db.ref('Users');
+            activeMembersListener = usersRef.on('value', snapshot => {
+                if (snapshot) {
+                    allMembersData = snapshot.val() || {};
+                    Object.keys(allMembersData).forEach(userId => {
+                         if(allMembersData[userId]) {
+                            userGymIds[userId] = allMembersData[userId].Gym_ID || 'N/A';
+                         }
+                    });
+                    if (currentSelectedMemberId && allMembersData[currentSelectedMemberId]) {
+                       setupMemberDetailsListener(currentSelectedMemberId);
                     }
-                );
-            } catch (error) {
-                console.error("Error setting up members listener:", error);
-                memberSelector.innerHTML = '<option value="">Error: ' + error.message + '</option>';
-            }
+                    showUpdateIndicator(membersUpdateIndicator);
+                }
+            }, error => console.error("Error loading members:", error));
         }
 
-        function updateMembersSelector(data) {
-            // Clear previous options except the default one
-            while (memberSelector.options.length > 1) {
-                memberSelector.remove(1);
+        function displaySearchResults(memberIds) {
+            searchResults.innerHTML = '';
+            if (memberIds.length === 0) {
+                searchResults.innerHTML = '<div class="search-placeholder">No members found</div>';
+            } else {
+                memberIds.sort((a,b) => (allMembersData[a]?.Name || '').localeCompare(allMembersData[b]?.Name || ''))
+                    .forEach(memberId => {
+                    const member = allMembersData[memberId];
+                    if (!member) return;
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'search-result-item';
+                    resultItem.innerHTML = `<div class="search-result-name">${member.Name || 'Unknown'}</div><div class="search-result-id">ID: ${memberId} | Gym ID: ${member.Gym_ID || 'N/A'}</div>`;
+                    resultItem.addEventListener('click', () => selectMember(memberId));
+                    searchResults.appendChild(resultItem);
+                });
             }
-
-            if (!data) {
-                return;
-            }
-
-            // Sort members by ID
-            const sortedMembers = Object.keys(data).sort((a, b) => parseInt(a) - parseInt(b));
-
-            sortedMembers.forEach(memberId => {
-                const member = data[memberId];
-                const option = document.createElement('option');
-                option.value = memberId;
-                option.textContent = `${memberId}: ${member.Name || 'Unknown'}`;
-                memberSelector.appendChild(option);
-            });
-
-            // If a member was previously selected, maintain the selection and update details
-            if (memberSelector.value) {
-                setupMemberDetailsListener(memberSelector.value);
-            }
+            searchResults.style.display = 'block';
         }
 
+        function selectMember(memberId) {
+            currentSelectedMemberId = memberId;
+            const memberName = allMembersData[memberId]?.Name || 'Unknown';
+            memberSearch.value = `${memberId}: ${memberName}`;
+            searchResults.style.display = 'none';
+            clearSearch.style.display = 'block';
+            setupMemberDetailsListener(memberId);
+        }
+        
         function setupMemberDetailsListener(memberId) {
-            // Check if Firebase is initialized
-            if (!db) {
-                memberDetails.innerHTML = '<div class="no-data">Firebase not initialized. Please refresh the page and try again.</div>';
-                return;
-            }
+            if (!db) return;
+            if (activeSingleMemberListener) activeSingleMemberListener();
             
             memberDetails.innerHTML = '<div class="loading">Loading member details...</div>';
-
-            // Remove previous listeners if any
-            if (activeMemberListener) {
-                activeMemberListener();
-                activeMemberListener = null;
-            }
-            if (activePaymentListener) {
-                activePaymentListener();
-                activePaymentListener = null;
-            }
-
-            try {
-                // Reference to the specific user
-                const userRef = db.ref(`Users/${memberId}`);
-                const paymentRef = db.ref(`paymentTable/${memberId}`);
-
-                // Set up real-time listeners with safe error handling
-                activeMemberListener = userRef.on('value', 
-                    (userSnapshot) => {
-                        if (userSnapshot) {
-                            const userData = userSnapshot.val();
-                            
-                            if (!userData) {
-                                memberDetails.innerHTML = '<div class="no-data">Member not found.</div>';
-                                return;
-                            }
-
-                            // The payment listener will trigger the UI update when both user and payment data are available
-                            if (!activePaymentListener) {
-                                activePaymentListener = paymentRef.on('value', 
-                                    (paymentSnapshot) => {
-                                        if (paymentSnapshot) {
-                                            const paymentData = paymentSnapshot.val() || {};
-                                            updateMemberDetailsDisplay(memberId, userData, paymentData);
-                                        } else {
-                                            updateMemberDetailsDisplay(memberId, userData, {});
-                                        }
-                                    }, 
-                                    (error) => {
-                                        console.error("Error loading payment data:", error);
-                                        // Still update the display with user data only
-                                        updateMemberDetailsDisplay(memberId, userData, {});
-                                    }
-                                );
-                            }
-                        } else {
-                            memberDetails.innerHTML = '<div class="no-data">Unable to retrieve member data.</div>';
-                        }
-                    }, 
-                    (error) => {
-                        console.error("Error loading member details:", error);
-                        memberDetails.innerHTML = `<div class="no-data">Error loading member details: ${error.message}</div>`;
-                    }
-                );
-            } catch (error) {
-                console.error("Error setting up member details listener:", error);
-                memberDetails.innerHTML = `<div class="no-data">Error setting up data listener: ${error.message}</div>`;
-            }
+            const memberRef = db.ref('Users/' + memberId);
+             
+            activeSingleMemberListener = memberRef.on('value', snapshot => {
+                 if (snapshot && snapshot.exists()) {
+                     const memberData = snapshot.val();
+                     updateMemberDetailsDisplay(memberId, memberData);
+                     setupPaymentHistoryListener(memberId);
+                 } else {
+                    memberDetails.innerHTML = `<div class="no-data">Member with ID ${memberId} not found.</div>`;
+                 }
+            }, error => {
+                console.error(`Error loading details for member ${memberId}:`, error);
+                memberDetails.innerHTML = `<div class="no-data">Error loading details.</div>`;
+            });
         }
+        
+        function updateMemberDetailsDisplay(memberId, userData) {
+            const isPaid = (userData.Payment_Status || '').toLowerCase() === 'paid';
+            let actionButtonHTML = '';
 
-        function updateMemberDetailsDisplay(memberId, userData, paymentData) {
-            // Format user details
-            const statusClass = (userData.Payment_Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+            if (isPaid) {
+                actionButtonHTML = `<button id="unpaidMemberBtn" class="danger">Mark as Unpaid</button>`;
+            } else {
+                actionButtonHTML = `<button id="recordPaymentBtn">Make Payment</button>`;
+            }
 
-            let html = `
+            let detailsHTML = `
                 <div class="user-detail">
-                    <h3>Member Details</h3>
+                    <h3>${userData.Name || 'N/A'} - Details</h3>
                     <div class="user-info">
-                        <div class="info-item">
-                            <div class="info-label">Member ID</div>
-                            <div class="info-value">${memberId}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Gym ID</div>
-                            <div class="info-value">${userData.Gym_ID || 'N/A'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Name</div>
-                            <div class="info-value">${userData.Name || 'N/A'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Age</div>
-                            <div class="info-value">${userData.Age || 'N/A'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Address</div>
-                            <div class="info-value">${userData.Address || 'N/A'}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Payment Status</div>
-                            <div class="info-value">
-                                <span class="payment-status ${statusClass}">${userData.Payment_Status || 'N/A'}</span>
-                            </div>
-                            
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Phone Number</div>
-                            <div class="info-value">${userData.Phone_Number || 'N/A'}</div>
-                        </div>
+                        <div class="info-item"><span class="info-label">Member ID:</span><span class="info-value">${memberId}</span></div>
+                        <div class="info-item"><span class="info-label">Gym ID:</span><span class="info-value">${userData.Gym_ID || 'N/A'}</span></div>
+                        <div class="info-item"><span class="info-label">Phone:</span><span class="info-value">${userData.Phone_Number || 'N/A'}</span></div>
+                        <div class="info-item"><span class="info-label">Last Payment:</span><span class="info-value">${formatDate(userData.Last_Payment_Date)}</span></div>
+                        <div class="info-item"><span class="info-label">Payment Status:</span><span class="info-value"><span class="payment-status ${isPaid ? 'status-paid' : 'status-unpaid'}">${userData.Payment_Status || 'N/A'}</span></span></div>
                     </div>
-                    
                     <div class="action-buttons">
-                        <button id="makePaymentBtn" data-id="${memberId}">Make Payment</button>
-                        
-                        <button id="editMemberBtn" data-id="${memberId}">Edit Details</button>
+                        ${actionButtonHTML}
+                        <button id="editMemberBtn">Edit Details</button>
                     </div>
                 </div>
+                <div id="paymentHistorySection" class="payment-history user-detail">
+                    <h4>Payment History</h4>
+                    <div id="paymentHistoryContainer"><div class="loading">Loading history...</div></div>
+                </div>
             `;
-
-            // Add payment history section if payment data exists
-            /*
-            if (paymentData && Object.keys(paymentData).length > 0) {
-                html += `
-                    <div class="payment-history">
-                        <h4>Payment History</h4>
-                        <table class="attendance-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                // Sort payment entries by date (newest first)
-                const sortedPayments = Object.keys(paymentData)
-                    .sort((a, b) => new Date(b) - new Date(a));
-
-                sortedPayments.forEach(date => {
-                    const payment = paymentData[date];
-                    const statusClass = (payment.Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
-
-                    html += `
-                        <tr>
-                            <td>${formatDate(date)}</td>
-                            <td>${payment.Amount || 'N/A'}</td>
-                            <td><span class="payment-status ${statusClass}">${payment.Status || 'N/A'}</span></td>
-                        </tr>
-                    `;
-                });
-
-                html += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
+            memberDetails.innerHTML = detailsHTML;
+            
+            if (isPaid) {
+                document.getElementById('unpaidMemberBtn').addEventListener('click', () => openUnpaidModal(memberId, userData.Last_Payment_Date));
             } else {
-                html += `
-                    <div class="payment-history">
-                        <h4>Payment History</h4>
-                        <div class="no-data">No payment history available</div>
-                    </div>
-                `;
+                document.getElementById('recordPaymentBtn').addEventListener('click', () => openPaymentModal(memberId));
             }
-*/
-            memberDetails.innerHTML = html;
-
-            // Attach event listeners to new buttons
-            document.getElementById('makePaymentBtn').addEventListener('click', function() {
-                openPaymentModal(memberId);
+            document.getElementById('editMemberBtn').addEventListener('click', () => openEditModal(memberId, userData));
+        }
+        
+        function setupPaymentHistoryListener(memberId) {
+            if (!db) return;
+            if(activePaymentListener) activePaymentListener();
+            
+            const historyRef = db.ref(`paymentTable/${memberId}`);
+            activePaymentListener = historyRef.on('value', snapshot => {
+                if (snapshot && snapshot.exists()) {
+                    updatePaymentHistoryDisplay(snapshot.val());
+                } else {
+                    updatePaymentHistoryDisplay(null);
+                }
+            }, error => {
+                console.error("Error loading payment history:", error);
+                const container = document.getElementById('paymentHistoryContainer');
+                if (container) {
+                    container.innerHTML = '<div class="no-data">Error loading history.</div>';
+                }
             });
+        }
+        
+        function updatePaymentHistoryDisplay(historyData) {
+            const container = document.getElementById('paymentHistoryContainer');
+            if (!container) return; 
+            
+            if (!historyData) {
+                container.innerHTML = '<div class="no-data">No payment history found.</div>';
+                return;
+            }
 
-            document.getElementById('editMemberBtn').addEventListener('click', function() {
-                openEditMemberModal(memberId, userData);
+            let historyHTML = `
+                <table class="attendance-table">
+                    <thead><tr><th>Payment Date</th><th>Status</th></tr></thead>
+                    <tbody>`;
+            const sortedKeys = Object.keys(historyData).sort().reverse();
+            sortedKeys.forEach(key => {
+                const entry = historyData[key];
+                if (!entry) return;
+                const statusClass = (entry.Status || '').toLowerCase() === 'paid' ? 'status-paid' : 'status-unpaid';
+                historyHTML += `
+                    <tr>
+                        <td>${formatDate(entry.Date)}</td>
+                        <td><span class="payment-status ${statusClass}">${entry.Status || 'N/A'}</span></td>
+                    </tr>`;
             });
+            historyHTML += `</tbody></table>`;
+            container.innerHTML = historyHTML;
         }
 
         function openPaymentModal(memberId) {
-            // Store the member ID for use in the confirmation function
             confirmPaymentBtn.setAttribute('data-id', memberId);
-            // Display the modal
             paymentModal.style.display = 'flex';
+        }
+
+        function openUnpaidModal(memberId, lastPaymentDate) {
+            confirmUnpaidBtn.setAttribute('data-id', memberId);
+            confirmUnpaidBtn.setAttribute('data-last-payment', lastPaymentDate);
+            unpaidModal.style.display = 'flex';
         }
 
         function processPayment() {
             const memberId = confirmPaymentBtn.getAttribute('data-id');
+            if (!memberId || !db) return;
             
-            if (!db || !memberId) {
-                alert('Error: Cannot process payment at this time.');
-                paymentModal.style.display = 'none';
-                return;
-            }
-
-            // Current date in YYYY-MM-DD format
-            const today = new Date().toISOString().split('T')[0];
+            const paymentDate = new Date().toISOString().split('T')[0];
             
-            // Update user payment status in User table
-            const userRef = db.ref(`Users/${memberId}`);
-            userRef.update({
-                Payment_Status: 'Paid',
-                Last_Payment_Date: today
+            const userUpdates = {
+                'Payment_Status': 'Paid',
+                'Last_Payment_Date': paymentDate
+            };
+            db.ref('Users/' + memberId).update(userUpdates)
+            .then(() => {
+                const paymentRecord = {
+                    Amount: "500.00",
+                    Date: paymentDate,
+                    Status: "Paid"
+                };
+                return db.ref(`paymentTable/${memberId}/${paymentDate}`).set(paymentRecord);
             })
             .then(() => {
-                // Record payment in paymentTable
-                const paymentRef = db.ref(`paymentTable/${memberId}/${today}`);
-                return paymentRef.set({
-                    Date: today,
-                    Amount: '500',  // Default amount, could be made configurable
-                    Status: 'Paid'
-                });
-            })
-            .then(() => {
-                // Close modal when done
+                console.log("Payment recorded successfully.");
                 paymentModal.style.display = 'none';
-                // Show success message
-                alert('Payment recorded successfully!');
             })
             .catch(error => {
-                console.error("Error recording payment:", error);
-                alert('Error recording payment: ' + error.message);
-                paymentModal.style.display = 'none';
+                console.error("Payment recording failed:", error);
+                alert("Failed to record payment. Please try again.");
             });
         }
 
-        function openEditMemberModal(memberId, userData) {
-            // Clear the form first
-            editMemberForm.innerHTML = '';
-            
-            // Create form fields based on user data
-            const fields = [
-                { id: 'name', label: 'Name', value: userData.Name || '' },
-                { id: 'gymId', label: 'Gym ID', value: userData.Gym_ID || '' },
-                { id: 'age', label: 'Age', value: userData.Age || '' },
-                { id: 'address', label: 'Address', value: userData.Address || '' },
-                { id: 'phoneNumber', label: 'Phone Number', value: userData.Phone_Number || '' }
-            ];
-            
-            fields.forEach(field => {
-                const formGroup = document.createElement('div');
-                formGroup.className = 'form-group';
-                
-                const label = document.createElement('label');
-                label.htmlFor = field.id;
-                label.textContent = field.label;
-                
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.id = field.id;
-                input.value = field.value;
-                input.name = field.id;
-                
-                formGroup.appendChild(label);
-                formGroup.appendChild(input);
-                editMemberForm.appendChild(formGroup);
+        function processUnpaid() {
+            const memberId = confirmUnpaidBtn.getAttribute('data-id');
+            const lastPaymentDate = confirmUnpaidBtn.getAttribute('data-last-payment');
+            if (!memberId || !db) return;
+
+            const userUpdates = {
+                'Payment_Status': 'Unpaid',
+                'Last_Payment_Date': '' // Clear the last payment date
+            };
+
+            db.ref('Users/' + memberId).update(userUpdates)
+            .then(() => {
+                console.log("User status updated to Unpaid.");
+                // If there's a last payment date, remove that record from paymentTable
+                if (lastPaymentDate) {
+                    return db.ref(`paymentTable/${memberId}/${lastPaymentDate}`).remove();
+                }
+            })
+            .then(() => {
+                console.log("Last payment record removed successfully.");
+                unpaidModal.style.display = 'none';
+            })
+            .catch(error => {
+                console.error("Failed to mark as unpaid:", error);
+                alert("Failed to update status. Please try again.");
             });
-            
-            // Store member ID for use in save function
-            saveChangesBtn.setAttribute('data-id', memberId);
-            
-            // Display the modal
+        }
+        
+        function openEditModal(memberId, data) {
+            currentSelectedMemberId = memberId;
+            const formHTML = `
+                <div class="edit-form">
+                    <div class="form-group">
+                        <label for="editName">Name</label>
+                        <input type="text" id="editName" value="${data.Name || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editGymId">Gym ID</label>
+                        <input type="text" id="editGymId" value="${data.Gym_ID || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editPhone">Phone Number</label>
+                        <input type="text" id="editPhone" value="${data.Phone_Number || ''}">
+                    </div>
+                </div>`;
+            editMemberFormContainer.innerHTML = formHTML;
             editMemberModal.style.display = 'flex';
         }
-
+        
         function saveUserChanges() {
-            const memberId = saveChangesBtn.getAttribute('data-id');
+            if (!currentSelectedMemberId || !db) return;
             
-            if (!db || !memberId) {
-                alert('Error: Cannot save changes at this time.');
-                editMemberModal.style.display = 'none';
-                return;
-            }
-            
-            // Get updated values from the form
-            const updatedData = {
-                Name: document.getElementById('name').value,
-                Gym_ID: document.getElementById('gymId').value,
-                Age: document.getElementById('age').value,
-                Address: document.getElementById('address').value,
-                Phone_Number: document.getElementById('phoneNumber').value
+            const updates = {
+                Name: document.getElementById('editName').value,
+                Gym_ID: document.getElementById('editGymId').value,
+                Phone_Number: document.getElementById('editPhone').value,
             };
-            
-            // Update user data in Firebase
-            const userRef = db.ref(`Users/${memberId}`);
-            userRef.update(updatedData)
+
+            db.ref('Users/' + currentSelectedMemberId).update(updates)
                 .then(() => {
-                    // Close modal when done
+                    console.log('Member details updated');
                     editMemberModal.style.display = 'none';
-                    // Show success message
-                    alert('Member details updated successfully!');
                 })
                 .catch(error => {
-                    console.error("Error updating member details:", error);
-                    alert('Error updating member details: ' + error.message);
-                    editMemberModal.style.display = 'none';
+                    console.error("Update failed:", error);
+                    alert("Failed to update details. Please try again.");
                 });
         }
-
-        // Helper function to format dates
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            
-            try {
-                const [year, month, day] = dateString.split('-');
-                return `${day}/${month}/${year}`;
-            } catch (e) {
-                return dateString; // Return original if format is unexpected
-            }
-        }
-
-        // Initialize tabs
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set the first tab as active
-            if (tabs.length > 0) {
-                tabs[0].click();
-            }
-        });
     </script>
 </body>
 </html>
