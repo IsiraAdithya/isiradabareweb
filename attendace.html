@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FitNation Attendance System</title>
-    <link rel="icon" type="image/png" href="https://placehold.co/32x32/4CAF50/FFFFFF?text=FN">
+    <link rel="icon" type="image/png" href="img/I.png">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -127,8 +127,6 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            overflow-x: auto;
-            display: block;
         }
 
         .attendance-table th,
@@ -137,6 +135,10 @@
             padding: 12px;
             text-align: left;
             white-space: nowrap;
+        }
+        
+        #attendanceData, #paymentHistoryContainer {
+            overflow-x: auto;
         }
 
         .attendance-table th {
