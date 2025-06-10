@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FitNation Attendance System</title>
-    <link rel="icon" type="image/png" href="img/I.png">
+   <link rel="icon" type="image/png" href="img/I.png">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -137,8 +137,16 @@
             white-space: nowrap;
         }
         
-        #attendanceData, #paymentHistoryContainer {
+        #attendanceData, #paymentHistoryContainer, #memberDetails {
             overflow-x: auto;
+        }
+        
+        #memberDetails .attendance-table tbody tr {
+            cursor: pointer;
+        }
+
+        #memberDetails .attendance-table tbody tr:hover {
+            background-color: #f0f0f0;
         }
 
         .attendance-table th {
@@ -228,13 +236,21 @@
 
         /* Member search styles */
         .member-search-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             position: relative;
             margin-bottom: 20px;
         }
 
+        .search-input-wrapper {
+            position: relative;
+            max-width: 400px;
+            flex-grow: 1;
+        }
+
         #memberSearch {
             width: 100%;
-            max-width: 400px;
             padding: 12px 40px 12px 16px;
             border: 2px solid #ddd;
             border-radius: 8px;
@@ -251,7 +267,7 @@
             position: absolute;
             top: 100%;
             left: 0;
-            right: 0;
+            width: 100%;
             max-width: 400px;
             background-color: white;
             border: 1px solid #ddd;
@@ -297,7 +313,7 @@
 
         .clear-search {
             position: absolute;
-            right: calc(100% - 388px);
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
@@ -463,9 +479,12 @@
         <div id="membersTab" class="content">
             <h2>Member Management</h2>
             <div class="member-search-container">
-                <input type="text" id="memberSearch" placeholder="Search members by name or ID...">
-                <button type="button" class="clear-search" id="clearSearch">&times;</button>
-                <div id="searchResults" class="search-results"></div>
+                <div class="search-input-wrapper">
+                    <input type="text" id="memberSearch" placeholder="Search members by name or ID...">
+                    <button type="button" class="clear-search" id="clearSearch">&times;</button>
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+                <button id="showAllMembersBtn">Show All</button>
             </div>
             <div id="memberDetails">
                 <div class="no-data">Select a member to view their details.</div>
@@ -569,6 +588,7 @@
         const memberSearch = document.getElementById('memberSearch');
         const searchResults = document.getElementById('searchResults');
         const clearSearch = document.getElementById('clearSearch');
+        const showAllMembersBtn = document.getElementById('showAllMembersBtn');
         const memberDetails = document.getElementById('memberDetails');
         
         const paymentModal = document.getElementById('paymentModal');
@@ -645,8 +665,15 @@
             memberSearch.focus();
         });
 
+        showAllMembersBtn.addEventListener('click', () => {
+            memberSearch.value = '';
+            searchResults.style.display = 'none';
+            clearSearch.style.display = 'none';
+            displayAllMembersTable();
+        });
+
         document.addEventListener('click', (event) => {
-            if (!event.target.closest('.member-search-container')) {
+            if (!event.target.closest('.search-input-wrapper')) {
                 searchResults.style.display = 'none';
             }
         });
@@ -821,6 +848,48 @@
                 });
             }
             searchResults.style.display = 'block';
+        }
+
+        function displayAllMembersTable() {
+            memberDetails.innerHTML = ''; // Clear the details section
+            const table = document.createElement('table');
+            table.className = 'attendance-table'; 
+
+            let tableHTML = `
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Gym ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            const sortedMemberIds = Object.keys(allMembersData).sort((a, b) => (allMembersData[a]?.Name || '').localeCompare(allMembersData[b]?.Name || ''));
+
+            sortedMemberIds.forEach(memberId => {
+                const member = allMembersData[memberId];
+                if (member) {
+                    tableHTML += `
+                        <tr data-id="${memberId}">
+                            <td>${member.Name || 'N/A'}</td>
+                            <td>${member.Gym_ID || 'N/A'}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            tableHTML += `</tbody>`;
+            table.innerHTML = tableHTML;
+            
+            table.addEventListener('click', (event) => {
+                const row = event.target.closest('tr');
+                if (row && row.dataset.id) {
+                    selectMember(row.dataset.id);
+                }
+            });
+
+            memberDetails.appendChild(table);
         }
 
         function selectMember(memberId) {
