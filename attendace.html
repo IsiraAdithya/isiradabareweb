@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FitNation Attendance System</title>
-   <link rel="icon" type="image/png" href="img/I.png">
+    <link rel="icon" type="image/png" href="img/I.png">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -858,6 +858,7 @@
             let tableHTML = `
                 <thead>
                     <tr>
+                        <th>#</th>
                         <th>Name</th>
                         <th>Gym ID</th>
                     </tr>
@@ -867,11 +868,12 @@
 
             const sortedMemberIds = Object.keys(allMembersData).sort((a, b) => (allMembersData[a]?.Name || '').localeCompare(allMembersData[b]?.Name || ''));
 
-            sortedMemberIds.forEach(memberId => {
+            sortedMemberIds.forEach((memberId, index) => {
                 const member = allMembersData[memberId];
                 if (member) {
                     tableHTML += `
                         <tr data-id="${memberId}">
+                            <td>${index + 1}</td>
                             <td>${member.Name || 'N/A'}</td>
                             <td>${member.Gym_ID || 'N/A'}</td>
                         </tr>
